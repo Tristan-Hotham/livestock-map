@@ -13,5 +13,5 @@ Source: FAO Gridded Livestock of the World v4, 2015 layers (Gilbert et al. 2018,
 Tools: Python (numpy, rasterio, pandas, matplotlib); Leaflet for the interactive map.
 
 Interactive version: https://maps.tristanhotham.com/livestock-map/
-Paper: {{DOI_URL}}
+Paper: https://doi.org/10.5281/zenodo.23842985
 Blog post: https://blog.tristanhotham.com/2026/10/31/livestock-map/

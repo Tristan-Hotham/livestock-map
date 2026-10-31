@@ -3,7 +3,7 @@
 A world map of farm animals: where the world's cattle, buffaloes, sheep, goats, pigs, chickens, ducks and horses live, every 10 km (FAO Gridded Livestock of the World, 2015), and how the herds and flocks of 18 kinds of farm animal have changed in every country from 1961 to 2024 (FAOSTAT).
 
 Interactive page: https://maps.tristanhotham.com/livestock-map/
-Paper: https://doi.org/{{DOI}}
+Paper: https://doi.org/10.5281/zenodo.23842985
 Blog post: https://blog.tristanhotham.com/2026/10/31/livestock-map/
 
 A data study by Dr Tristan Hotham (Independent researcher, ORCID 0000-0003-4931-9349).
@@ -75,7 +75,7 @@ python3 code/12_qa.py           # browser check and screenshots
 
 ## Citation
 
-Hotham, T. (2026) Where the animals are: the world's cattle, sheep, goats, pigs, chickens and other farm animals, mapped every 10 km and counted by country, 1961 to 2024. Zenodo. https://doi.org/{{DOI}}
+Hotham, T. (2026) Where the animals are: the world's cattle, sheep, goats, pigs, chickens and other farm animals, mapped every 10 km and counted by country, 1961 to 2024. Zenodo. https://doi.org/10.5281/zenodo.23842985
 
 Dr Tristan Hotham, Independent researcher. ORCID 0000-0003-4931-9349.
 
