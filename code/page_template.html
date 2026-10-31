@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Where the Animals Are</title>
+<meta name="description" content="A world map of farm animals: where the world's {{world.sp.cattle.n|bn}} cattle, {{world.sp.sheep.n|bn}} sheep, {{world.sp.goats.n|bn}} goats, {{world.sp.pigs.n|bn}} pigs and {{world.sp.chickens.n|bn}} chickens live, at 10 km and by country, from FAO data.">
+<meta property="og:title" content="Where the animals are: the world's cattle, sheep, goats, pigs, chickens and more on one map">
+<meta property="og:description" content="{{world.animals|bn}} farm animals for {{world.pop|bn}} people: {{world.birds_pp|f1}} farmed birds and {{world.mammals_pp|f2}} farmed mammals for every person. Mapped every 10 km, with country counts from {{meta.first|raw}} to {{meta.last|raw}}.">
+<meta property="og:image" content="https://maps.tristanhotham.com/livestock-map/header.png">
+<meta property="og:url" content="https://maps.tristanhotham.com/livestock-map/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800;9..144,900&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Farmyard: straw paper, barn red, pasture green, hay gold. Species colours are set in the script. */
+:root{
+  --bg:#F7F3E8; --panel:#EEE7D5; --fg:#22201A; --muted:#6A6558; --rule:#E1D8C2; --card:#FFFCF4; --border:#D0C4A8;
+  --hot:#9B2D20; --cool:#4E7A3A; --gold:#D89A12; --land:#ECE4D2; --sea:#F2EEE4;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17160F; --panel:#222017; --fg:#EEEADF; --muted:#A8A290; --rule:#36332A; --card:#1D1B14; --border:#4A4638;
+  --hot:#E2806E; --cool:#9CC287; --gold:#F0C04E; --land:#2A271E; --sea:#1A1913; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17160F; --panel:#222017; --fg:#EEEADF; --muted:#A8A290; --rule:#36332A; --card:#1D1B14; --border:#4A4638;
+  --hot:#E2806E; --cool:#9CC287; --gold:#F0C04E; --land:#2A271E; --sea:#1A1913; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 18px/1.62 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-x:hidden}
+.wrap{max-width:700px;margin:0 auto;padding-block:28px 64px}
+.wrap .bleed{width:min(1180px,calc(100vw - 32px));margin-left:calc((100% - min(1180px,100vw - 32px))/2);margin-right:0}
+a{color:inherit;text-decoration-color:var(--hot);text-underline-offset:3px}
+.kicker{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kicker b{background:var(--hot);color:#fff;padding:5px 8px;font-weight:500}
+header.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;align-items:end;border-bottom:6px double var(--fg);padding-bottom:22px;margin-top:18px}
+h1{font:900 clamp(44px,11vw,96px)/.9 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 .a{color:var(--hot)} h1 .b{color:var(--cool)}
+.mark{width:clamp(78px,16vw,128px);height:auto;display:block}
+.dek{grid-column:1/-1;font-size:21px;line-height:1.42;margin:8px 0 0;max-width:56ch}
+.byline{font:400 13px/1.4 var(--mono);color:var(--muted);margin-top:14px}
+h2{font:800 34px/1.04 var(--display);letter-spacing:-.01em;margin:54px 0 10px;text-wrap:balance}
+h2 .n{font:500 13px/1 var(--mono);color:var(--hot);display:block;letter-spacing:.1em;margin-bottom:10px}
+h3{font:600 20px/1.25 var(--display);margin:28px 0 6px}
+p{margin:0 0 16px}
+.lede::first-letter{font:900 72px/.8 var(--display);float:left;margin:6px 10px 0 0;color:var(--hot)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0 8px}
+.stats div{background:var(--card);padding:14px 12px}
+.stats b{display:block;font:900 clamp(22px,4.4vw,32px)/1 var(--display);letter-spacing:-.01em}
+.stats b.h{color:var(--hot)} .stats b.c{color:var(--cool)} .stats b.g{color:var(--gold)}
+.stats span{font:400 12px/1.35 var(--mono);color:var(--muted);display:block;margin-top:6px}
+@media (max-width:600px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.figure{margin:26px 0 30px}
+.fig-h{font:600 19px/1.25 var(--display);margin:0 0 4px}
+.fig-sub{font:400 13px/1.45 var(--mono);color:var(--muted);margin:0 0 12px}
+.src{font:400 12px/1.45 var(--mono);color:var(--muted);margin-top:10px}
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+svg text{font-family:var(--mono);fill:var(--fg)}
+.lab{font-size:12px}.lab.m{fill:var(--muted)}.lab.b{font-weight:500}.lab.s{font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font:400 12px/1.45 var(--mono);padding:8px 10px;border-radius:3px;max-width:290px;z-index:1000;transform:translate(-50%,calc(-100% - 12px));display:none}
+.tip b{font-weight:500}
+.controls{display:flex;gap:8px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.scrollrow{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:2px;max-width:100%}
+.scrollrow .btn{flex:0 0 auto;white-space:nowrap}
+.ctl-l{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px;flex:0 0 auto;align-self:center}
+.btn{font:500 12px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:8px 10px;cursor:pointer;min-height:36px}
+.btn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.btn:focus-visible,input:focus-visible,summary:focus-visible,select:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.tabs .btn[aria-pressed="true"]{background:var(--tab,var(--hot));border-color:var(--tab,var(--hot));color:#fff}
+.searchbox{position:relative;flex:1 1 260px;min-width:0}
+input[type=search]{font:400 15px/1 var(--mono);background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:10px 11px;min-height:40px;width:100%}
+.suggest{position:absolute;left:0;right:0;top:100%;margin:2px 0 0;padding:0;list-style:none;background:var(--card);border:1px solid var(--border);z-index:1001;font:400 13px/1.3 var(--mono);display:none;max-height:340px;overflow:auto}
+.suggest li{padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--rule)}
+.suggest li span{color:var(--muted)}
+.suggest li[aria-selected="true"],.suggest li:hover{background:var(--panel)}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media (max-width:900px){.mapgrid{grid-template-columns:1fr}}
+.side{background:var(--card);border:1px solid var(--border);padding:12px 12px 10px;font:400 13px/1.45 var(--mono);max-height:660px;overflow:auto}
+@media (max-width:900px){.side{max-height:none}}
+.side h4{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+.side h4:first-child{margin-top:2px}
+.side .big{font:800 26px/1.1 var(--display);margin:2px 0 4px}
+.side .sub{color:var(--muted);font-size:12px;margin:0 0 8px}
+.side table{width:100%;border-collapse:collapse;margin:4px 0 6px}
+.side td{padding:4px 4px 4px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.side td.num{text-align:right;white-space:nowrap}
+.side th{font:500 10.5px/1.2 var(--mono);color:var(--muted);text-align:right;padding:2px 0 4px;letter-spacing:.04em}
+.side th:first-child{text-align:left}
+.chip{display:inline-block;font:500 11px/1 var(--mono);padding:4px 7px;border-radius:999px;color:#fff;margin:0 4px 4px 0}
+.go{cursor:pointer;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.15)}
+.lmap{height:620px;border:1px solid var(--border);background:var(--sea);border-radius:2px}
+@media (max-width:600px){.lmap{height:min(62vh,460px)}}
+.leaflet-container{font:400 12px/1.4 var(--mono);background:var(--sea)}
+.leaflet-popup-content{font:400 12.5px/1.45 var(--mono);margin:10px 12px}
+.leaflet-popup-content b{font-weight:600}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--fg)}
+.lyrBtn{background:var(--card,var(--bg));color:var(--fg);border:1px solid var(--border);border-radius:3px;font:600 12px/1 var(--mono);padding:8px 10px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.lyrBtn[aria-expanded="true"]{background:var(--fg);color:var(--bg)}
+.lyrPanel{background:var(--card,var(--bg));color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:10px 12px 8px;margin-top:6px;width:250px;box-shadow:0 2px 10px rgba(0,0,0,.15);font:400 12px/1.3 var(--mono);max-height:min(70vh,520px);overflow:auto}
+.lyrPanel[hidden]{display:none}
+.lyrPanel .row{margin:0 0 9px}
+.lyrPanel label{display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:600}
+.lyrPanel input[type=range]{width:100%;accent-color:var(--fg)}
+.lyrPanel select{font:400 12px var(--mono);background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:2px;padding:2px 4px;width:100%;min-height:0}
+.lyrPanel .sub{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11px;margin-top:3px}
+.lyrPanel .sub span{flex:0 0 58px}
+.lyrPanel .hd{font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 7px;border-top:1px solid var(--rule);padding-top:9px}
+.lyrPanel .reset{font:400 11px var(--mono);color:var(--muted);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.cityL{font:500 11px/1 var(--mono);color:var(--fg);white-space:nowrap;text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 2px var(--bg);pointer-events:none}
+.cityL i{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--fg);margin-right:4px;vertical-align:1px}
+.cityL.s{font-size:10px;font-weight:400}
+.cntL{font:700 11px/1 var(--mono);color:var(--fg);white-space:nowrap;text-transform:uppercase;letter-spacing:.06em;opacity:.75;text-shadow:0 0 3px var(--bg),0 0 3px var(--bg);pointer-events:none;text-align:center}
+.mapnote{background:color-mix(in srgb,var(--card) 92%,transparent);border:1px solid var(--border);border-radius:3px;padding:6px 9px;font:400 12px/1.35 var(--mono);max-width:min(300px,62vw);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.mapnote b{font-weight:600}
+.mapnote:empty{display:none}
+.leaflet-bar a,.leaflet-bar a:hover{background:var(--card);color:var(--fg);border-bottom-color:var(--border)}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--card) 85%,transparent)!important;color:var(--muted)}
+.leaflet-control-attribution a{color:var(--fg)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;font:400 12px/1.3 var(--mono);color:var(--muted);margin-top:8px;align-items:center}
+.legend span{display:inline-flex;align-items:center}
+.legend i{display:inline-block;width:13px;height:13px;margin-right:6px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
+.legend svg{max-width:420px;width:100%}
+.pull{font:600 26px/1.25 var(--display);border-left:6px solid var(--hot);padding:4px 0 4px 18px;margin:30px 0}
+.note{background:var(--panel);border:1px solid var(--rule);padding:14px 16px;font-size:16px;margin:22px 0}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+@media (max-width:760px){.cards{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.cards{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-left:8px solid var(--c,var(--hot));padding:12px 14px;font:400 13px/1.5 var(--mono)}
+.card b{font:600 19px/1.2 var(--display);display:block;margin-bottom:2px}
+.card .big{font:900 28px/1.05 var(--display);margin:6px 0 2px}
+.card .big span{color:var(--muted);font:400 13px/1 var(--mono)}
+.card button{margin-top:8px}
+details{margin:14px 0}
+summary{font:500 13px/1.4 var(--mono);cursor:pointer;color:var(--fg);padding:8px 0}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.cta a{font:500 13px/1 var(--mono);text-decoration:none;border:1px solid var(--fg);padding:11px 14px;border-radius:3px}
+.cta a.p{background:var(--hot);border-color:var(--hot);color:#fff}
+footer{border-top:6px double var(--fg);margin-top:56px;padding-top:16px;font:400 13px/1.55 var(--mono);color:var(--muted)}
+footer p{margin:0 0 10px}
+.theme{position:fixed;right:12px;bottom:12px;z-index:1002}
+.loadmsg{font:400 12px var(--mono);color:var(--muted);min-height:16px}
+@media print{.theme,.controls{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="kicker"><b>Data study</b><span>Farming</span><span>World, 2026</span></div>
+<header class="hero">
+  <h1>Where the <span class="a">animals</span> <span class="b">are</span></h1>
+  <svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><g id="heroMark"></g></svg>
+  <p class="dek">Cattle on the pampas, sheep on Welsh hills, pigs in the southern Netherlands, buffaloes along the Indus and {{world.sp.chickens.n|bn}} chickens nearly everywhere. A map of the world's farm animals every 10 km, and the story of how the herds and flocks have changed since {{meta.first|raw}}.</p>
+</header>
+<div class="byline">Dr Tristan Hotham · Independent researcher · 2026 · Data: FAO Gridded Livestock of the World; FAOSTAT; World Bank; Natural Earth</div>
+
+<div class="stats">
+  <div><b class="h">{{world.animals|bn}}</b><span>farm animals alive at any one time, {{meta.last|raw}}, for {{world.pop|bn}} people</span></div>
+  <div><b class="g">{{world.sp.chickens.pp|f1}}</b><span>chickens for every person on Earth; {{world.sp.chickens.x|f1}} times as many as in {{meta.first|raw}}</span></div>
+  <div><b class="c">{{mam_pp.n_more|int}}</b><span>countries (of {{mam_pp.n_countries|int}} with a million people) where farm mammals outnumber people</span></div>
+  <div><b>{{conc.pigs.top1_pct|pc}}</b><span>of the world's pigs live in China, and {{conc.buffalo.top1_pct|pc}} of its buffaloes in India</span></div>
+</div>
+
+<p class="lede">Farm animals are so familiar that it is easy to forget how many there are. There are about {{world.sp.cattle.n|bn}} cattle, {{world.sp.sheep.n|bn}} sheep, {{world.sp.goats.n|bn}} goats and {{world.sp.pigs.n|bn}} pigs, and around {{world.sp.chickens.n|bn}} chickens, all alive at the same moment. But where are they? Not where the people are, and not spread evenly over the grass. Some countries are a single animal's country; some valleys hold more pigs than any city holds people.</p>
+<p>This page puts them on a map. The <b>FAO's Gridded Livestock of the World</b> estimates how many cattle, buffaloes, sheep, goats, pigs, chickens, ducks and horses lived in every 10 km square in 2015, by spreading census counts across the land with a statistical model. <b>FAOSTAT</b> gives each country's herds and flocks every year from {{meta.first|raw}} to {{meta.last|raw}}, for eighteen kinds of animal from camels to guinea pigs. Pick an animal, then tap anywhere on the map.</p>
+
+<h2><span class="n">01 · The map</span>Every herd and flock, every 10 km</h2>
+<div class="bleed" id="atlas">
+<div class="controls">
+  <div class="scrollrow tabs" id="spTabs"><span class="ctl-l">Animal</span></div>
+</div>
+<div class="controls">
+  <div class="scrollrow" id="viewRow"><span class="ctl-l">Show</span><button class="btn" data-v="grid" aria-pressed="true">Every 10 km (2015)</button><button class="btn" data-v="pp">By country, per person</button><button class="btn" data-v="km">By country, per km²</button><button class="btn" data-v="n">By country, head</button></div>
+</div>
+<div class="controls">
+  <div class="searchbox"><input type="search" id="q" placeholder="Search a country, UK county or city" aria-label="Search a country, UK county or city" autocomplete="off"><ul class="suggest" id="sug" role="listbox"></ul></div>
+</div>
+<div class="controls">
+  <div class="scrollrow" id="focusRow"><span class="ctl-l">Zoom to</span></div>
+</div>
+<div class="mapgrid">
+  <div><div id="map" class="lmap" role="application" aria-label="World livestock map"></div>
+    <div class="loadmsg" id="loadMsg"></div>
+    <div class="legend" id="legend"></div></div>
+  <div class="side" id="side" aria-live="polite"></div>
+</div>
+<p class="src" id="mapsrc"></p>
+</div>
+
+<h2><span class="n">02 · The count</span>Four farm animals for every person</h2>
+<p>In {{meta.last|raw}} FAOSTAT counted about {{world.animals|bn}} farm animals alive at once, {{world.animals_pp|f1}} for each of the world's {{world.pop|bn}} people. Birds are most of them: {{world.birds|bn}} chickens, ducks, geese, turkeys and other birds ({{world.birds_pp|f1}} per person), {{world.chick_share_birds|pc}} of them chickens. The mammals add up to {{world.mammals|bn}}, about two for every three people.</p>
+<div class="figure"><p class="fig-h">For every 100 people</p><p class="fig-sub">Farm animals alive in {{meta.last|raw}} for every 100 people in the world (FAOSTAT stocks; World Bank population). Hover for totals.</p><div class="chart" id="per100"></div></div>
+
+<h2><span class="n">03 · Since {{meta.first|raw}}</span>The chicken century</h2>
+<p>Since {{meta.first|raw}} the world's human population has grown {{world.pop_x|f1}} times. Chickens have grown {{world.sp.chickens.x|f1}} times, from {{world.sp.chickens.n0|bn}} to {{world.sp.chickens.n|bn}}, and ducks {{world.sp.ducks.x|f1}} times. Goats ({{world.sp.goats.x|f1}} times) and camels ({{world.sp.camels.x|f1}}) have grown faster than people, mostly in Africa and Asia, which now hold {{goats_afr_asia_share|pc}} of the world's goats. Cattle have grown more slowly than people: there were {{world.cattle_pp0|f2}} cattle per person in {{meta.first|raw}} and {{world.cattle_pp|f2}} in {{meta.last|raw}}. Horses and mules have fallen, as tractors and lorries took their work.</p>
+<div class="figure"><p class="fig-h">How the herds and flocks have grown</p><p class="fig-sub">World stocks as a multiple of {{meta.first|raw}} (FAOSTAT). The grey line is people.</p><div class="chart" id="growth"></div></div>
+<p>The chickens also moved. In {{meta.first|raw}} Asia had {{chick_asia_share0|pc}} of the world's chickens; in {{meta.last|raw}} it has {{chick_asia_share|pc}}. Pigs had their own shock: African swine fever swept through China in 2018 and 2019, and China's pig herd fell by {{pigs.chn_fall_pct|pc}} in a single year, {{pigs.chn_fall_n|m0}} pigs, enough to pull the world total down by {{pigs.fall_pct|pc}}. China's herd has since recovered to {{pigs.chn_last|m0}}.</p>
+<div class="cta"><a href="#atlas" data-sp="chickens" data-view="grid">Chickens on the map</a><a href="#atlas" data-sp="pigs" data-focus="CHN">China's pigs</a></div>
+
+<h2><span class="n">04 · Outnumbered</span>Where animals outnumber people</h2>
+<p>In {{mam_pp.n_more|int}} of the {{mam_pp.n_countries|int}} countries with at least a million people, farm mammals outnumber humans. Mongolia is the extreme: {{mongolia.mammals|m}} sheep, goats, cattle, horses and camels for {{mongolia.pop|m}} people, {{mongolia.pp|f1}} each, and the most goats ({{pp.goats.top.0.pp|f1}}) and sheep ({{pp.sheep.top.0.pp|f1}}) per person anywhere. Uruguay has {{pp.cattle.top.0.pp|f1}} cattle per person, the most in the world, and Denmark is the only country of a million people or more with more pigs than people ({{pp.pigs.top.0.pp|f1}} each).</p>
+<div class="figure"><p class="fig-h">Farm mammals per person</p><p class="fig-sub">Cattle, buffaloes, sheep, goats, pigs, horses, donkeys, mules, camels, llamas and alpacas per person, {{meta.last|raw}}; countries with a million people or more.</p><div class="chart" id="mamChart"></div></div>
+<p>New Zealand is the country of sheep jokes, and the joke is getting old. Its flock peaked in {{nz.peak_year|raw}} at {{nz.peak|m}}, {{nz.peak_pp|f1}} sheep per person. By {{meta.last|raw}} it was down {{nz.fall_pct|pc}} to {{nz.last|m}}, {{nz.last_pp|f1}} per person, while its cattle herd grew by about a fifth. Australia has {{pp.sheep.top.2.pp|f1}} sheep per person, and the Sahel countries, from Mauritania and Mali to Chad and South Sudan, all appear among the countries where sheep, goats or cattle outnumber people.</p>
+<div class="cards" id="cards"></div>
+
+<h2><span class="n">05 · Concentration</span>One country's pigs, another's buffaloes</h2>
+<p>Some animals are spread around the world; others belong mostly to one country. China has {{conc.pigs.top1_pct|pc}} of the world's pigs, {{conc.ducks.top1_pct|pc}} of its ducks and {{conc.geese.top1_pct|pc}} of its geese. India has {{conc.buffalo.top1_pct|pc}} of the buffaloes, and India, Pakistan and China together have {{conc.buffalo.top3_pct|pc}}. A quarter of the world's camels ({{conc.camels.top1_pct|pc}}) are in Chad. Cattle, sheep and horses are shared more widely: the biggest herds, in Brazil, China and Mexico, hold {{conc.cattle.top1_pct|pc}}, {{conc.sheep.top1_pct|pc}} and {{conc.horses.top1_pct|pc}}.</p>
+<div class="figure"><p class="fig-h">The biggest herd's share of the world</p><p class="fig-sub">Share of the world's stock in the country with most, {{meta.last|raw}} (FAOSTAT). Hover for the top three.</p><div class="chart" id="concChart"></div></div>
+<p>The grid shows the same thing on the ground. Half of the world's pigs live on {{grid.conc.pigs.land50_pct|f1}}% of its land and half of its chickens on {{grid.conc.chickens.land50_pct|f1}}%, while half of its cattle need {{grid.conc.cattle.land50_pct|f1}}% and half of its sheep {{grid.conc.sheep.land50_pct|f1}}%. Grazing animals spread out; pigs and poultry crowd together, in sheds, around cities and along the feed and meat supply chains. The densest pig country of all is the south-east of the Netherlands, where the grid puts about {{grid.hot.pigs.dens|int}} pigs on a square kilometre around {{grid.hot.pigs.near|raw}}.</p>
+<p class="pull">Half of the world's pigs live on {{grid.conc.pigs.land50_pct|f1}}% of its land.</p>
+<div class="figure"><p class="fig-h">How much land holds half of them</p><p class="fig-sub">The smallest share of the world's land (Antarctica left out) that holds half of each animal, from the densest 10 km cells down (GLW, 2015).</p><div class="chart" id="landChart"></div></div>
+
+<h2><span class="n">06 · The main animal</span>A world of cattle, with islands of pigs and sheep</h2>
+<p>To compare a cow with a chicken, farm statistics use livestock units, a rough measure of size and feed: in FAOSTAT's units a cow counts for about {{grid.coef.cattle|f2}} of a unit on world average, a sheep or goat for about {{grid.coef.sheep|f2}}, a pig {{grid.coef.pigs|f2}} and a chicken {{grid.coef.chickens|f2}}. Weighted this way, cattle are the main farm animal in {{main.counts.cattle|int}} of {{main.n|int}} countries, chickens in {{main.counts.chickens|int}}, pigs in {{main.counts.pigs|int}} and sheep in {{main.counts.sheep|int}}. Across all countries cattle make up {{lsu_world.share.cattle|pc}} of the world's livestock units.</p>
+<p>The "Main animal" layer of the map does the same for every 10 km square. Cattle lead on {{grid.dom_pct.cattle|pc}} of the world's land. The exceptions make a map of their own: pigs across China's farm belt and in Denmark, the southern Netherlands and Catalonia, buffaloes along the Ganges and Indus, sheep in Patagonia, the Karoo, western and south-eastern Australia and the hills of Wales, sheep and goats along the desert edges of the Sahel, Arabia, Somalia and Iran, and chickens in the American south-east, Arabia and Iran. About {{grid.empty_pct|pc}} of the land has less than one livestock unit per square kilometre.</p>
+<div class="cta"><a href="#atlas" data-sp="main" data-view="grid">Main animal on the map</a><a href="#atlas" data-sp="buffalo" data-focus="IND">India's buffaloes</a></div>
+
+<h2><span class="n">07 · Britain and Ireland</span>Sheep hills, dairy pasture and poultry plains</h2>
+<p>The United Kingdom has {{uk.fao.sheep|m}} sheep, more than any other country in Europe outside Turkey, against {{uk.fao.cattle|m}} cattle, {{uk.fao.pigs|m}} pigs and {{uk.fao.chickens|m0}} chickens. By livestock units cattle are its main animal ({{uk.main_share|pc}}), then sheep ({{uk.lsu_share.sheep|pc}}). The grid shows the country divided by its hills. Wales has {{uk.wales_area_share|pc}} of the UK's land but {{uk.nations.Wales.sheep_share|pc}} of its sheep, {{uk.wales_sheep_x_england|f1}} times England's density, and Powys alone has {{uk.top_sheep_n.0.share|pc}} of all UK sheep. Cattle are densest in Northern Ireland ({{uk.nations.Northern Ireland.cattle_km2|int}} per km²) and the dairy pastures of Cheshire, Cornwall and Somerset. Pigs and chickens belong to the east: {{uk.nations.England.pigs_share|pc}} of UK pigs are in England, the most in North Yorkshire, Norfolk and Suffolk and the densest in the East Riding of Yorkshire, and Herefordshire and Lincolnshire have the most chickens per square kilometre.</p>
+<div class="two">
+<div class="figure"><p class="fig-h">Sheep per km² by county</p><p class="fig-sub">UK counties, GLW 2015.</p><div class="chart" id="ukSheep"></div></div>
+<div class="figure"><p class="fig-h">Pigs per km² by county</p><p class="fig-sub">UK counties, GLW 2015.</p><div class="chart" id="ukPigs"></div></div>
+</div>
+<p>Ireland is cattle country above all: {{ireland.cattle|m}} cattle for {{ireland.pop|m}} people, {{ireland.cattle_pp|f1}} each, and {{ireland.cattle_lsu_share|pc}} of its livestock units. Across the UK, cattle are the main animal in {{uk.dom_counties.cattle|int}} of {{uk.n_counties|int}} counties and sheep in {{uk.dom_counties.sheep|int}}, from Shetland and the Scottish Borders to Powys and Gwynedd; pigs lead in Norfolk, Suffolk and the East Riding of Yorkshire.</p>
+<div class="cta"><a href="#atlas" data-sp="sheep" data-focus="UKI">Sheep in Britain and Ireland</a><a href="#atlas" data-sp="main" data-focus="UKI">Main animal, Britain and Ireland</a></div>
+
+<h2><span class="n">08 · How I did this</span>Methods and caveats</h2>
+<p><b>The grid.</b> Gridded Livestock of the World version 4 (GLW 4) gives the number of cattle, buffaloes, sheep, goats, pigs, chickens, ducks and horses in each 5 arc minute cell (about 10 km at the equator) in 2015. FAO and its partners collected sub-national census counts, fitted random forest models of animal density against climate, land cover, access to markets and other covariates, and used the predictions to share each census total among the cells inside it (the 'dasymetric' layer used here). Summed over the world, the grid matches FAOSTAT's 2015 totals to within a few per cent ({{grid.vs_fao2015.cattle|f1}}% for cattle). It is a model: it is most reliable where census areas are small, and it can spread animals thinly over remote land or pile them near towns where the covariates say so.</p>
+<p><b>Counts by country.</b> FAOSTAT's 'Stocks' element, the number of animals alive at one time in each year, {{meta.first|raw}} to {{meta.last|raw}}, matched to Natural Earth countries. China is mainland China (FAOSTAT also has a 'China' total that adds Taiwan, Hong Kong and Macao). Former states (the USSR, Yugoslavia, Czechoslovakia and others) count in world totals but have no country of their own here, so country series for their successors start in the early 1990s. Per person figures use World Bank population for the same year.</p>
+<p><b>Livestock units.</b> FAOSTAT's livestock patterns tables give each country's stocks in livestock units; dividing by head gives each country's own factor for each animal (ducks take the chicken factor). The main animal of a country or a 10 km square is the one with most livestock units; squares with less than one unit per km² are left blank. UK county figures share each 10 km square among the counties it touches by area.</p>
+<p><b>What this is not.</b> These are animals alive at one moment, not animals slaughtered in a year: a broiler chicken lives about six weeks, so far more chickens are raised each year than are alive at once. FAOSTAT figures are official national figures and FAO estimates, of uneven quality; nomadic herds are hard to count. The grid is for 2015 and does not show change since. Wild animals, reindeer, fish and insects are not included.</p>
+<details><summary>Sources and licences</summary>
+<ul>
+<li>Gilbert, M. et al. (2018) Global distribution data for cattle, buffaloes, horses, sheep, goats, pigs, chickens and ducks in 2010. Scientific Data 5, 180227. Gridded Livestock of the World v4, 2015 layers, Harvard Dataverse (doi:10.7910/DVN/LHBICE cattle, VZOYHM sheep, YYG6ET goats, CIVCPB pigs, SXHLF3 chickens, I1WCAB buffaloes, JJGCTX horses, S9ONXV ducks). CC BY 4.0.</li>
+<li>FAO (2026) FAOSTAT: Crops and livestock products (QCL), Livestock patterns (EK) and Land use (RL), bulk downloads retrieved in {{meta.retrieved|raw}}. CC BY 4.0.</li>
+<li>World Bank, World Development Indicators, total population (SP.POP.TOTL), via github.com/datasets/population. CC BY 4.0.</li>
+<li>Natural Earth countries and populated places (public domain); UK counties from ONS and partner boundaries (Open Government Licence).</li>
+<li>Base map tiles © Esri.</li>
+</ul></details>
+
+<div class="cta"><a class="p" href="https://doi.org/{{DOI}}">Read the paper</a><a href="https://github.com/Tristan-Hotham/livestock-map">Data and code</a><a href="https://blog.tristanhotham.com/2026/10/31/livestock-map/">Blog post</a><a href="https://blog.tristanhotham.com/">Blog home</a></div>
+
+<footer>
+<p>Dr Tristan Hotham · Independent researcher · 2026. ORCID <a href="https://orcid.org/0000-0003-4931-9349">0000-0003-4931-9349</a>.</p>
+<p>Cite as: Hotham, T. (2026) Where the animals are: the world's cattle, sheep, goats, pigs, chickens and other farm animals, mapped from FAO data. Zenodo. <a href="https://doi.org/{{DOI}}">https://doi.org/{{DOI}}</a></p>
+<p>Licence: text, figures and data CC BY 4.0; code MIT. Data: FAO GLW 4 and FAOSTAT (CC BY 4.0), World Bank (CC BY 4.0), Natural Earth (public domain).</p>
+<p>I wrote the text, with drafting and editing assistance from Claude (Anthropic), which also helped prepare the analysis code. I reviewed and checked all text and results.</p>
+</footer>
+</div>
+<div class="tip" id="tip"></div>
+<button class="btn theme" id="theme" aria-label="Toggle dark mode">◐</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const R = /*RESULTS*/;
+const SITE = /*SITE*/;
+const fmt = n => n == null || n === "" || isNaN(n) ? "n/a" : Math.round(n).toLocaleString("en-GB");
+const big = n => n == null ? "n/a" : n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 1 : 2) + " billion" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e8 ? 0 : 1) + " million" : fmt(n);
+const sig = n => n == null ? "n/a" : n >= 100 ? fmt(n) : n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n >= .1 ? n.toFixed(2) : n > 0 ? n.toFixed(3) : "0";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tip = document.getElementById("tip");
+function showTip(h, x, y) { tip.innerHTML = h; tip.style.display = "block"; const w = tip.offsetWidth; x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, x)); tip.style.left = x + scrollX + "px"; tip.style.top = y + scrollY + "px"; }
+function hideTip() { tip.style.display = "none"; }
+document.addEventListener("click", hideTip);
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const lbl = (svg, x, y, s, cls = "lab", anchor = "start") => { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, svg); t.textContent = s; return t; };
+const redraws = [];
+function resp(box, render) { let last = 0; const go = force => { const w = Math.max(280, Math.round(box.clientWidth)); if (!force && Math.abs(w - last) < 4) return; last = w; box.innerHTML = ""; render(w, w < 560); }; new ResizeObserver(() => go()).observe(box); go(); redraws.push(() => go(true)); }
+const isDark = () => { const r = document.documentElement; return r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const small = () => innerWidth < 900;
+const CN = iso => (SITE.c[iso] || {}).n || iso;
+
+/* ---------- animals and colours ---------- */
+const SP = {}; SITE.species.forEach(([k, l, pl, c]) => SP[k] = { l, pl, c });
+const SK = SITE.species.map(s => s[0]);
+const EXTRA = { geese: "#7E8C6A", turkeys: "#A0522D", asses: "#8A8478", mules: "#9C8F7A", camels: "#C9A15E", camelids: "#B07C9E", rabbits: "#B7A99A", rodents: "#A88F7F", birds: "#7FA0B5", bees: "#D8B23C" };
+const colOf = k => SP[k] ? SP[k].c : EXTRA[k] || "#888";
+const labOf = k => SITE.label[k] || k;
+const TABS = [["main", "Main animal", "#22201A"], ["lsu", "All livestock", "#5C4B3A"]].concat(SK.map(k => [k, SP[k].l, SP[k].c]));
+
+/* hero mark: a field of 100 squares coloured by the world's livestock units */
+(function () {
+  const g = document.getElementById("heroMark"); const sh = R.lsu_world.share;
+  const ks = ["cattle", "buffalo", "sheep", "goats", "pigs", "chickens", "horses"].filter(k => sh[k]);
+  const rest = 100 - ks.reduce((s, k) => s + Math.round(sh[k]), 0); let cells = [];
+  ks.forEach(k => { for (let i = 0; i < Math.round(sh[k]); i++) cells.push(colOf(k)); });
+  for (let i = 0; i < rest; i++) cells.push("#B9AE97");
+  cells = cells.slice(0, 100);
+  cells.forEach((c, i) => el("rect", { x: 2 + (i % 10) * 11.6, y: 2 + Math.floor(i / 10) * 11.6, width: 10, height: 10, rx: 1.5, fill: c }, g));
+})();
+
+/* ---------- grids (coded PNGs, see code/02_grids.py) ---------- */
+const GW = 4320, GH = 1740, GTOP = 85, CELL = 1 / 12;
+const PNGS = { a: ["cattle", "sheep", "goats"], b: ["pigs", "chickens", "buffalo"], c: ["horses", "ducks", "lsu"], d: ["dom", "cid", null] };
+const FILE_OF = {}; Object.entries(PNGS).forEach(([f, ks]) => ks.forEach((k, i) => { if (k) FILE_OF[k] = [f, i]; }));
+const D = {}; const loading = {};
+const msg = document.getElementById("loadMsg");
+async function pixels(url) {
+  const blob = await (await fetch(url)).blob();
+  let src; try { src = await createImageBitmap(blob, { colorSpaceConversion: "none", premultiplyAlpha: "none" }); }
+  catch (e) { src = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(blob); }); }
+  const c = document.createElement("canvas"); c.width = GW; c.height = GH; const x = c.getContext("2d", { willReadFrequently: true });
+  x.drawImage(src, 0, 0); return x.getImageData(0, 0, GW, GH).data;
+}
+function need(k) {
+  const f = FILE_OF[k][0];
+  if (!loading[f]) { msg.textContent = "Loading the grid..."; loading[f] = pixels(`data/page/grid_${f}.png`).then(px => {
+    PNGS[f].forEach((kk, ch) => { if (!kk) return; const o = new Uint8Array(GW * GH); for (let i = 0; i < GW * GH; i++) o[i] = px[i * 4 + ch]; D[kk] = o; });
+    msg.textContent = ""; }); }
+  return loading[f];
+}
+const RNG = SITE.range;
+const decode = (k, v) => { if (!v) return 0; const [lo, hi] = RNG[k]; return Math.pow(10, Math.log10(lo) + (v - 1) / 254 * (Math.log10(hi) - Math.log10(lo))); };
+const gidx = (lat, lon) => { const r = Math.floor((GTOP - lat) / CELL), c = Math.floor((((lon + 180) % 360 + 360) % 360) / CELL); return r < 0 || r >= GH ? -1 : r * GW + c; };
+const cellKm2 = lat => Math.pow(111.32 / 12, 2) * Math.cos(lat * Math.PI / 180);
+
+/* colour ramps: paper to the animal's colour to a dark version of it */
+function hex(h) { return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function mixA(a, b, t) { return a.map((x, i) => Math.round(x + (b[i] - x) * t)); }
+const LUT = {};
+function lutFor(k) {
+  const key = k + (isDark() ? "d" : "l"); if (LUT[key]) return LUT[key];
+  const base = hex(k === "lsu" ? "#5C4B3A" : SP[k].c), pale = isDark() ? [70, 64, 50] : [246, 238, 214], dark = mixA(base, [20, 16, 10], .55), out = [null];
+  for (let v = 1; v < 256; v++) { const t = (v - 1) / 254; const c = t < .55 ? mixA(pale, base, t / .55) : mixA(base, dark, (t - .55) / .45); out.push([c[0], c[1], c[2], Math.round(255 * Math.min(1, .35 + t * 1.2))]); }
+  return LUT[key] = out;
+}
+const DOMK = [null].concat(SK);
+function domCol(d, l) { if (!d) return null; const c = hex(SP[DOMK[d]].c); const a = Math.max(.28, Math.min(1, (l - 30) / 150)); return [c[0], c[1], c[2], Math.round(a * 255)]; }
+
+/* ---------- map ---------- */
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+const ESRI_ATT = 'Tiles &copy; Esri, HERE, Garmin, USGS, NGA, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const LYDEF = { base: "plain", hills: true, hillK: 45, labels: false, labelK: 80, names: true, nameLvl: 1, cnames: true, borders: true, counties: true, colour: 90, grid: true };
+const LY = { ...LYDEF };
+try { Object.assign(LY, JSON.parse(localStorage.getItem("livestock_layers") || "{}")); } catch (e) {}
+const saveLY = () => { try { localStorage.setItem("livestock_layers", JSON.stringify(LY)); } catch (e) {} };
+const map = L.map("map", { minZoom: 1, maxZoom: 11, maxBounds: [[-70, -200], [86, 200]], zoomSnap: .5, scrollWheelZoom: false }).setView([25, 12], small() ? 1 : 2);
+map.on("focus click", () => map.scrollWheelZoom.enable());
+[["grid", 350], ["fill", 400], ["hills", 420], ["lines", 430], ["labels", 450], ["names", 620]].forEach(([n, z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; });
+["grid", "hills", "lines", "labels", "names"].forEach(n => map.getPane(n).style.pointerEvents = "none");
+let base = null, hills = null, labels = null; const names = L.layerGroup(), cnames = L.layerGroup();
+let WORLD = null, CITIES = [], UKC = null, borderL = null, countyL = null, choroL = null;
+function setTiles() {
+  [base, labels, hills].forEach(l => { if (l) map.removeLayer(l); });
+  const t = isDark() ? "Dark" : "Light";
+  const url = LY.base === "relief" ? ESRI + "World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}" : LY.base === "satellite" ? ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}" : `${ESRI}Canvas/World_${t}_Gray_Base/MapServer/tile/{z}/{y}/{x}`;
+  base = LY.base === "none" ? null : L.tileLayer(url, { maxZoom: 16, maxNativeZoom: LY.base === "relief" ? 13 : 16, attribution: ESRI_ATT });
+  if (base) base.addTo(map);
+  hills = L.tileLayer(ESRI + "Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}", { maxZoom: 16, maxNativeZoom: 16, pane: "hills" });
+  labels = L.tileLayer(`${ESRI}Canvas/World_${t}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16, pane: "labels" });
+  LUT_RESET(); applyLayers();
+}
+function LUT_RESET() { if (gridL) gridL.redraw(); }
+function applyLayers() {
+  if (LY.hills) { hills.addTo(map); hills.setOpacity(Math.min(1, .1 + LY.hillK / 140)); } else map.removeLayer(hills);
+  if (LY.labels) { labels.addTo(map); labels.setOpacity(LY.labelK / 100); } else map.removeLayer(labels);
+  if (LY.names) names.addTo(map); else map.removeLayer(names);
+  if (LY.cnames) cnames.addTo(map); else map.removeLayer(cnames);
+  if (gridL) { gridL.setOpacity(LY.colour / 100); if (LY.grid && S.view === "grid") gridL.addTo(map); else map.removeLayer(gridL); }
+  if (choroL && S.view !== "grid") choroL.setStyle(cStyle);
+  drawLines(); placeNames();
+}
+function drawLines() {
+  if (borderL) { map.removeLayer(borderL); borderL = null; }
+  if (countyL) { map.removeLayer(countyL); }
+  if (!WORLD) return;
+  const col = isDark() ? "#DCD6C6" : "#3A3528";
+  if (LY.borders && S.view === "grid") borderL = L.geoJSON(WORLD, { pane: "lines", interactive: false, style: { color: col, weight: .7, opacity: .55, fill: false } }).addTo(map);
+  if (UKC && LY.counties && map.getZoom() >= 5) countyL.addTo(map);
+}
+function placeNames() {
+  names.clearLayers(); cnames.clearLayers();
+  const z = map.getZoom(), bb = map.getBounds().pad(.05); const boxes = [];
+  if (LY.names) {
+    const minPop = [[2, 8e6], [3, 3e6], [4, 1e6], [5, 4e5], [6, 1.5e5], [7, 6e4], [99, 9000]].find(([zz]) => z < zz + (LY.nameLvl === 2 ? 1.5 : LY.nameLvl === 0 ? -1 : 0))[1] * (LY.nameLvl === 0 ? 2 : 1);
+    let n = 0;
+    for (const c of CITIES) {
+      if (c[3] < minPop || !bb.contains([c[1], c[2]])) continue;
+      const pt = map.latLngToContainerPoint([c[1], c[2]]), bg = c[3] >= 5e6;
+      const bx = [pt.x - 4, pt.y - 8, pt.x + 10 + c[0].length * (bg ? 6.9 : 6.3), pt.y + 7];
+      if (boxes.some(o => bx[0] < o[2] && bx[2] > o[0] && bx[1] < o[3] && bx[3] > o[1])) continue;
+      boxes.push(bx); L.marker([c[1], c[2]], { pane: "names", interactive: false, keyboard: false, icon: L.divIcon({ className: "cityL" + (bg ? "" : " s"), html: `<i></i>${esc(c[0])}`, iconSize: null, iconAnchor: [3, 6] }) }).addTo(names);
+      if (++n >= 140) break;
+    }
+  }
+  if (LY.cnames && WORLD && z >= 3 && z < 6) {
+    WORLD.features.forEach(f => { const iso = f.properties.iso, g = f.properties._c; if (!g || !bb.contains(g)) return; const nm = CN(iso);
+      if (z < 4 && (f.properties._a || 0) < 40) return; const pt = map.latLngToContainerPoint(g), w = nm.length * 7.2;
+      const bx = [pt.x - w / 2, pt.y - 7, pt.x + w / 2, pt.y + 7]; if (boxes.some(o => bx[0] < o[2] && bx[2] > o[0] && bx[1] < o[3] && bx[3] > o[1])) return; boxes.push(bx);
+      L.marker(g, { pane: "names", interactive: false, keyboard: false, icon: L.divIcon({ className: "cntL", html: esc(nm), iconSize: [w, 14], iconAnchor: [w / 2, 7] }) }).addTo(cnames); });
+  }
+}
+(function layerControl() {
+  const Ctl = L.Control.extend({ options: { position: "topright" }, onAdd() {
+    const d = L.DomUtil.create("div"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.innerHTML = `<button class="lyrBtn" aria-expanded="false">Map layers</button>
+<div class="lyrPanel" hidden>
+ <div class="row"><label style="font-weight:600">Base map</label><div class="sub"><select data-k="base" aria-label="Base map"><option value="plain">Plain grey</option><option value="relief">Shaded relief</option><option value="satellite">Satellite</option><option value="none">None</option></select></div></div>
+ <div class="row"><label><input type="checkbox" data-k="hills"> Hills and mountains</label><div class="sub"><span>strength</span><input type="range" data-k="hillK" min="10" max="100" step="5" aria-label="Hill shading strength"></div></div>
+ <div class="row"><label><input type="checkbox" data-k="labels"> Map labels</label><div class="sub"><span>strength</span><input type="range" data-k="labelK" min="20" max="100" step="5" aria-label="Map label strength"></div></div>
+ <div class="row"><label><input type="checkbox" data-k="names"> Bold city names</label><div class="sub"><span>how many</span><select data-k="nameLvl" aria-label="How many city names"><option value="0">Biggest only</option><option value="1">Some</option><option value="2">Lots</option></select></div></div>
+ <div class="row"><label><input type="checkbox" data-k="cnames"> Country names</label></div>
+ <div class="row"><label><input type="checkbox" data-k="borders"> Borders</label></div>
+ <div class="row"><label><input type="checkbox" data-k="counties"> UK counties</label><div class="sub">from zoom 5</div></div>
+ <div class="hd">Animals</div>
+ <div class="row"><label><input type="checkbox" data-k="grid"> 10 km grid</label></div>
+ <div class="row"><label style="font-weight:600">Colour</label><div class="sub"><span>strength</span><input type="range" data-k="colour" min="20" max="100" step="5" aria-label="Colour strength"></div></div>
+ <button class="reset">Reset layers</button>
+</div>`;
+    return d; } });
+  map.addControl(new Ctl());
+  const box = map.getContainer(), btn = box.querySelector(".lyrBtn"), pan = box.querySelector(".lyrPanel");
+  btn.onclick = () => { const o = pan.hidden; pan.hidden = !o; btn.setAttribute("aria-expanded", o); };
+  const sync = () => pan.querySelectorAll("[data-k]").forEach(i => { const k = i.dataset.k; if (i.type === "checkbox") i.checked = LY[k]; else i.value = LY[k]; });
+  pan.querySelectorAll("[data-k]").forEach(i => i.addEventListener(i.type === "range" ? "input" : "change", () => {
+    const k = i.dataset.k; LY[k] = i.type === "checkbox" ? i.checked : (k === "base" ? i.value : +i.value);
+    if (k === "hillK") LY.hills = true; if (k === "labelK") LY.labels = true; if (k === "nameLvl") LY.names = true;
+    sync(); saveLY(); if (k === "base") setTiles(); else applyLayers();
+  }));
+  pan.querySelector(".reset").onclick = () => { Object.assign(LY, LYDEF); saveLY(); sync(); setTiles(); };
+  sync();
+})();
+const Note = L.Control.extend({ options: { position: "bottomleft" }, onAdd() { const d = L.DomUtil.create("div", "mapnote"); d.id = "mapnote"; L.DomEvent.disableClickPropagation(d); return d; } });
+map.addControl(new Note());
+L.control.scale({ imperial: false, position: "bottomright" }).addTo(map);
+function note(h) { document.getElementById("mapnote").innerHTML = h || ""; }
+
+/* ---------- state ---------- */
+const S = { sp: "main", view: "grid", sel: null, county: null, pt: null };
+
+/* the grid layer: tiles drawn in the browser from the coded grids */
+const RAD = 180 / Math.PI;
+let gridL = null;
+const GridLayer = L.GridLayer.extend({
+  createTile(c) {
+    const t = document.createElement("canvas"); t.width = t.height = 256;
+    const k = S.sp, main = k === "main"; if (main ? !D.dom || !D.lsu : !D[k]) return t;
+    const A = main ? D.dom : D[k], Lq = D.lsu, lut = main ? null : lutFor(k);
+    const ctx = t.getContext("2d"), img = ctx.createImageData(256, 256), d = img.data, n = 256 * Math.pow(2, c.z);
+    const cols = new Int32Array(256); for (let i = 0; i < 256; i++) { const lon = (c.x * 256 + i + .5) / n * 360 - 180; cols[i] = Math.floor((((lon + 180) % 360 + 360) % 360) / CELL); }
+    for (let j = 0; j < 256; j++) { const y = Math.PI * (1 - 2 * (c.y * 256 + j + .5) / n), lat = Math.atan(Math.sinh(y)) * RAD; const r = Math.floor((GTOP - lat) / CELL); if (r < 0 || r >= GH) continue; const ro = r * GW;
+      for (let i = 0; i < 256; i++) { const v = A[ro + cols[i]]; if (!v) continue; const col = main ? domCol(v, Lq[ro + cols[i]]) : lut[v]; if (!col) continue; const q = (j * 256 + i) * 4; d[q] = col[0]; d[q + 1] = col[1]; d[q + 2] = col[2]; d[q + 3] = col[3]; } }
+    ctx.putImageData(img, 0, 0); return t;
+  }
+});
+function renderGrid() {
+  const ks = S.sp === "main" ? ["dom", "lsu"] : [S.sp];
+  Promise.all(ks.map(need)).then(() => {
+    if (!gridL) gridL = new GridLayer({ pane: "grid", opacity: LY.colour / 100, maxNativeZoom: 7, attribution: "Livestock: FAO GLW 4 (2015), FAOSTAT" });
+    gridL.redraw(); applyLayers(); legend(); if (S.pt) cellPanel();
+  });
+}
+
+/* ---------- country values (FAOSTAT, latest year) ---------- */
+const MAMS = ["cattle", "buffalo", "sheep", "goats", "pigs", "horses", "asses", "mules", "camels", "camelids"];
+function cval(iso) {
+  const c = SITE.c[iso]; if (!c || !c.v) return null;
+  let n;
+  if (S.sp === "main") return c.m || null;
+  if (S.sp === "lsu") n = c.l; else n = c.v[S.sp] || 0;
+  if (n == null) return null;
+  if (S.view === "pp") return c.p ? n / c.p : null;
+  if (S.view === "km") return c.a ? n / c.a : null;
+  return n;
+}
+const BINS = { pp: [.01, .03, .1, .3, 1, 3, 10], km: [1, 3, 10, 30, 100, 300, 1000], n: [1e4, 1e5, 1e6, 3e6, 1e7, 3e7, 1e8] };
+function binsFor() { if (S.view === "n" && (S.sp === "chickens" || S.sp === "ducks")) return [1e5, 1e6, 1e7, 3e7, 1e8, 3e8, 1e9]; if (S.view === "km" && S.sp === "chickens") return [10, 30, 100, 300, 1000, 3000, 10000]; return BINS[S.view] || BINS.km; }
+function mixH(a, b, t) { const A = hex(a), B = hex(b); return "#" + A.map((x, i) => Math.round(x + (B[i] - x) * t).toString(16).padStart(2, "0")).join(""); }
+const spColour = () => S.sp === "lsu" ? (isDark() ? "#C8B79E" : "#5C4B3A") : SP[S.sp].c;
+function rampCol(v) { if (!v) return null; const B = binsFor(); if (v < B[0]) return mixH(isDark() ? "#2a271e" : "#efe6d2", spColour(), .12); let k = 0; B.forEach((b, i) => { if (v >= b) k = i; }); const land = isDark() ? "#2a271e" : "#efe6d2"; return mixH(land, spColour(), .26 + .7 * k / (B.length - 1)); }
+function cStyle(f) {
+  const iso = f.properties.iso, v = cval(iso), sel = iso === S.sel;
+  let fill = null; if (S.sp === "main") fill = v ? colOf(v) : null; else fill = rampCol(v);
+  return { color: sel ? css("--fg") : (isDark() ? "#6b6454" : "#fff"), weight: sel ? 2.2 : (LY.borders ? .6 : 0), fillColor: fill || css("--land"), fillOpacity: (fill ? .9 : .45) * LY.colour / 100 };
+}
+function cTip(iso) {
+  const c = SITE.c[iso]; if (!c || !c.v) return `<b>${esc(CN(iso))}</b><br>No FAOSTAT figures`;
+  if (S.sp === "main") return c.m ? `<b>${esc(CN(iso))}</b><br>Main animal: ${esc(labOf(c.m).toLowerCase())} (${c.ms.toFixed(0)}% of livestock units)` : `<b>${esc(CN(iso))}</b>`;
+  const v = cval(iso), what = S.sp === "lsu" ? "livestock units" : SP[S.sp].pl;
+  return `<b>${esc(CN(iso))}</b><br>${S.view === "pp" ? sig(v) + " " + what + " per person" : S.view === "km" ? sig(v) + " " + what + " per km²" : big(v) + " " + what}`;
+}
+
+/* ---------- legend ---------- */
+function legend() {
+  const e = document.getElementById("legend"); e.innerHTML = "";
+  if (S.sp === "main") { e.innerHTML = SK.filter(k => k !== "ducks").map(k => `<span><i style="background:${SP[k].c}"></i>${esc(SP[k].l)}</span>`).join("") + (S.view === "grid" ? `<span>paler where there are fewer animals; blank under one livestock unit per km²</span>` : ["camels"].map(k => `<span><i style="background:${colOf(k)}"></i>Camels</span>`).join("")); }
+  else if (S.view === "grid") {
+    const k = S.sp, [lo, hi] = RNG[k], lut = lutFor(k), W0 = 420, s = el("svg", { viewBox: `0 0 ${W0} 46` }, e), x0 = 14, x1 = W0 - 22;
+    const g = el("linearGradient", { id: "lg" + k + (isDark() ? "d" : "") }, s); for (let i = 0; i <= 20; i++) { const c = lut[1 + Math.round(i / 20 * 254)]; el("stop", { offset: i / 20, "stop-color": `rgb(${c[0]},${c[1]},${c[2]})` }, g); }
+    el("rect", { x: x0, y: 4, width: x1 - x0, height: 14, fill: `url(#${g.id})`, stroke: css("--border") }, s);
+    const ticks = []; for (let p = Math.ceil(Math.log10(lo)); p <= Math.log10(hi); p++) ticks.push(Math.pow(10, p));
+    ticks.forEach(v => { const x = x0 + (x1 - x0) * (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)); el("line", { x1: x, x2: x, y1: 18, y2: 23, stroke: css("--fg") }, s); lbl(s, x, 35, v >= 1000 ? fmt(v) : String(v), "lab s", "middle"); });
+    const sp = document.createElement("span"); sp.textContent = `${k === "lsu" ? "livestock units" : SP[k].pl} per km², 2015`; e.appendChild(sp);
+  } else {
+    const B = binsFor(); e.innerHTML = B.map((b, i) => `<span><i style="background:${rampCol(b)}"></i>${b < 1 ? b : b >= 1e6 ? big(b).replace(" million", "m").replace(" billion", "bn") : fmt(b)}${i < B.length - 1 ? "" : "+"}</span>`).join("") + `<span>${S.sp === "lsu" ? "livestock units" : SP[S.sp].pl} ${S.view === "pp" ? "per person" : S.view === "km" ? "per km² of land" : "head"}, ${SITE.last}</span>`;
+  }
+  document.getElementById("mapsrc").textContent = (S.view === "grid" ? "Every 10 km: FAO Gridded Livestock of the World v4, 2015 (dasymetric layer), head per km² of land; a model that shares census counts among cells. " : `By country: FAOSTAT stocks, ${SITE.last}; World Bank population; FAOSTAT land area. `) + "Main animal: the one with most livestock units (FAOSTAT factors). Outlines: Natural Earth. Base map tiles © Esri.";
+}
+
+/* ---------- side panel ---------- */
+let SER = null, serLoading = null;
+function loadSeries() { if (!serLoading) serLoading = fetch("data/page/series.json").then(r => r.json()).then(j => { SER = j; side(); }); return serLoading; }
+function countryBlock(iso) {
+  const c = SITE.c[iso]; if (!c) return "";
+  let h = `<div class="big">${esc(CN(iso))}</div>`;
+  if (!c.v) return h + `<p class="sub">No FAOSTAT livestock figures for this country.</p>`;
+  h += `<p class="sub">${c.p ? fmt(c.p) + " people" : ""}${c.a ? " · " + fmt(c.a) + " km² of land" : ""}${c.m ? ` · main animal <b>${esc(labOf(c.m).toLowerCase())}</b>` : ""}</p>`;
+  const ks = Object.keys(c.v).filter(k => k !== "bees").sort((a, b) => c.v[b] - c.v[a]);
+  h += `<table><tr><th>${SITE.last}</th><th>head</th><th>per person</th><th>per km²</th></tr>` + ks.slice(0, 12).map(k => `<tr><td><span class="sw" style="background:${colOf(k)}"></span>${esc(labOf(k))}</td><td class="num">${big(c.v[k])}</td><td class="num">${c.p ? sig(c.v[k] / c.p) : ""}</td><td class="num">${c.a ? sig(c.v[k] / c.a) : ""}</td></tr>`).join("") + `</table>`;
+  if (c.lb) h += `<h4>Livestock units</h4><p>${Object.entries(c.lb).sort((a, b) => b[1] - a[1]).filter(e => e[1] >= 1).map(([k, v]) => `<span class="chip" style="background:${colOf(k)}">${esc(labOf(k))} ${v.toFixed(0)}%</span>`).join("")}</p>`;
+  h += `<h4>Since ${SITE.first}</h4><div class="chart" id="cChart"></div><p class="sub">FAOSTAT stocks, millions of head (log scale). Tap a name to hide it.</p>`;
+  return h;
+}
+function cellPanel() {
+  const [lat, lon] = S.pt; const i = gidx(lat, lon); if (i < 0) return "";
+  const have = SK.filter(k => D[k]); const a = cellKm2(lat);
+  if (D.cid && !D.cid[i]) return `<h4>This 10 km square</h4><p class="sub">${lat.toFixed(2)}°, ${lon.toFixed(2)}° · sea or no country: no farm animals here.</p>`;
+  let h = `<h4>This 10 km square, 2015</h4><p class="sub">${lat.toFixed(2)}°, ${lon.toFixed(2)}° · about ${fmt(a)} km²</p>`;
+  if (!have.length) return h;
+  const rows = have.map(k => [k, decode(k, D[k][i])]).sort((x, y) => y[1] * (SITE.c.GBR ? 1 : 1) - x[1] * 1);
+  h += `<table><tr><th></th><th>per km²</th><th>in the square</th></tr>` + rows.map(([k, d]) => `<tr><td><span class="sw" style="background:${SP[k].c}"></span>${esc(SP[k].l)}</td><td class="num">${d ? "about " + sig(d) : "none"}</td><td class="num">${d ? fmt(d * a) : ""}</td></tr>`).join("") + `</table>`;
+  if (D.dom && D.dom[i]) h += `<p>Main animal here: <b>${esc(SP[DOMK[D.dom[i]]].l.toLowerCase())}</b>${D.lsu ? `, about ${sig(decode("lsu", D.lsu[i]))} livestock units per km²` : ""}.</p>`;
+  h += `<p class="sub">Grid values are model estimates, rounded on a log scale (within about 5%).</p>`;
+  return h;
+}
+function countyBlock(n) {
+  const e = SITE.uk.find(x => x.n === n); if (!e) return "";
+  const rows = SK.filter(k => e[k] > 0).sort((a, b) => e[b] - e[a]);
+  return `<h4>UK county, 2015</h4><div class="big">${esc(n)}</div><p class="sub">${esc(e.nat)} · ${fmt(e.a)} km² · main animal <b>${esc(SP[e.d].l.toLowerCase())}</b></p><table><tr><th></th><th>head</th><th>per km²</th></tr>` +
+    rows.map(k => `<tr><td><span class="sw" style="background:${SP[k].c}"></span>${esc(SP[k].l)}</td><td class="num">${fmt(e[k])}</td><td class="num">${sig(e[k] / e.a)}</td></tr>`).join("") + `</table><p class="sub">From the 10 km grid, shared among counties by area.</p>`;
+}
+function side() {
+  const box = document.getElementById("side"); let h = "";
+  if (S.county) h += countyBlock(S.county);
+  if (S.pt && S.view === "grid") h += cellPanel();
+  if (S.sel) { h += `<h4>${S.county ? "Country, " + SITE.last : "Country"}</h4>` + countryBlock(S.sel); }
+  if (!h) {
+    h = `<h4>${S.sp === "main" ? "Main animal" : S.sp === "lsu" ? "All livestock" : esc(SP[S.sp].l)}</h4><div class="big">Tap the map</div><p>${S.view === "grid" ? "Colours show how many animals live in each 10 km square (2015). Tap anywhere for the estimates there and the country's figures." : "Countries are shaded by FAOSTAT's latest count. Tap a country for its herds and flocks and how they have changed since " + SITE.first + "."}</p>
+<h4>The world, ${SITE.last}</h4><table>` + ["chickens", "cattle", "sheep", "goats", "pigs", "ducks", "buffalo", "camels", "horses"].map(k => `<tr><td><span class="sw" style="background:${colOf(k)}"></span>${esc(labOf(k))}</td><td class="num">${big(SITE.world[k])}</td></tr>`).join("") + `</table>`;
+  }
+  box.innerHTML = h;
+  if (S.sel && document.getElementById("cChart")) { if (!SER) loadSeries(); else countryChart(document.getElementById("cChart"), S.sel); }
+}
+const hidden = new Set(["ducks", "horses"]);
+function countryChart(box, iso) {
+  const s = SER.c[iso]; if (!s) { box.innerHTML = ""; return; }
+  const ks = Object.keys(s).filter(k => k[0] !== "_" && k !== "bees" && Math.max(...s[k].map(v => v || 0)) >= 1e4).sort((a, b) => Math.max(...s[b].map(v => v || 0)) - Math.max(...s[a].map(v => v || 0))).slice(0, 7);
+  lines(box, SER.years, ks.map(k => ({ k, n: labOf(k), c: colOf(k), v: s[k], off: hidden.has(k) })), { log: true, unit: v => big(v), aria: "Line chart of livestock numbers since " + SITE.first, toggle: k => { hidden.has(k) ? hidden.delete(k) : hidden.add(k); countryChart(box, iso); } });
+}
+
+/* ---------- actions ---------- */
+function setSp(k) {
+  S.sp = k; document.querySelectorAll("#spTabs .btn").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === k));
+  if (S.view === "grid") renderGrid(); else { if (choroL) choroL.setStyle(cStyle); legend(); }
+  side();
+}
+function setView(v) {
+  S.view = v; document.querySelectorAll("#viewRow .btn").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === v));
+  if (choroL) { if (v === "grid") map.removeLayer(choroL); else { choroL.addTo(map); choroL.setStyle(cStyle); } }
+  if (v === "grid") renderGrid(); else { applyLayers(); legend(); }
+  side();
+}
+const FIT = { UKI: [[49.8, -10.6], [59.5, 2.2]], USA: [[24, -125], [50, -66]], RUS: [[41, 27], [70, 140]], FRA: [[41.3, -5.2], [51.2, 9.6]], NZL: [[-47.5, 166], [-34, 179]], CHN: [[18, 73], [53.6, 135]], NOR: [[57.9, 4.5], [71.2, 31]], SAH: [[8, -18], [22, 25]], NLD: [[50.7, 3.3], [53.6, 7.3]], GBR: [[49.9, -8.2], [58.7, 1.8]], CHL: [[-56, -76], [-17.5, -66]] };
+function fitIso(iso) { if (FIT[iso]) { map.fitBounds(FIT[iso]); return; } const f = WORLD && WORLD.features.find(x => x.properties.iso === iso); if (f) map.fitBounds(L.geoJSON(f).getBounds(), { padding: [10, 10], maxZoom: 7 }); }
+function toMap() { if (small()) document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "start" }); }
+function pickCountry(iso, move) { S.sel = iso; S.county = null; S.pt = null; if (move) { fitIso(iso); toMap(); } if (choroL) choroL.setStyle(cStyle); note(`<b>${esc(CN(iso))}</b>`); side(); }
+function isoAt(lat, lon) { const i = gidx(lat, lon); if (i >= 0 && D.cid && D.cid[i]) return SITE.isos[D.cid[i] - 1]; return null; }
+let pop = null;
+function popupAt(lat, lon) {
+  const i = gidx(lat, lon), iso = isoAt(lat, lon); let h = iso ? `<b>${esc(CN(iso))}</b>` : `<b>${lat.toFixed(2)}°, ${lon.toFixed(2)}°</b>`;
+  if (S.county) h = `<b>${esc(S.county)}</b>, ${esc(CN("GBR"))}`;
+  if (i >= 0 && D.cid && !D.cid[i]) h += `<br>Sea: no farm animals here`;
+  else if (i >= 0) {
+    if (S.sp === "main" && D.dom) h += D.dom[i] ? `<br>Main animal: ${esc(SP[DOMK[D.dom[i]]].l.toLowerCase())}<br>about ${sig(decode("lsu", D.lsu[i]))} livestock units per km²` : `<br>Under one livestock unit per km²`;
+    else if (D[S.sp]) { const d = decode(S.sp, D[S.sp][i]); h += `<br>${esc(S.sp === "lsu" ? "Livestock units" : SP[S.sp].l)}: ${d ? "about " + sig(d) + " per km²" : "none recorded"}<br>about ${fmt(d * cellKm2(lat))} in this 10 km square`; }
+  }
+  h += `<br><small>Details in the panel</small>`;
+  pop = L.popup({ autoPan: false, maxWidth: 240 }).setLatLng([lat, lon]).setContent(h).openOn(map);
+}
+map.on("click", e => {
+  if (S.view !== "grid") return;
+  const { lat, lng } = e.latlng; const lon = ((lng + 180) % 360 + 360) % 360 - 180;
+  S.pt = [lat, lon]; S.county = null;
+  const go = () => { S.sel = isoAt(lat, lon); const cty = countyAt(lat, lon); if (cty) S.county = cty; popupAt(lat, lon); if (choroL) choroL.setStyle(cStyle); side(); };
+  Promise.all(["cid", "dom", "lsu"].concat(SK).map(need)).then(go);
+});
+function countyAt(lat, lon) {
+  if (!UKC || lat < 49.8 || lat > 61 || lon < -8.7 || lon > 2) return null;
+  for (const f of UKC.features) { if (!f._b.contains([lat, lon])) continue; const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+    for (const p of polys) { let inside = false; const r = p[0]; for (let a = 0, b = r.length - 1; a < r.length; b = a++) { const [xi, yi] = r[a], [xj, yj] = r[b]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside; } if (inside) return f.properties.n; } }
+  return null;
+}
+(function tabs() {
+  const row = document.getElementById("spTabs");
+  TABS.forEach(([k, l, c]) => { const b = document.createElement("button"); b.className = "btn"; b.dataset.k = k; b.style.setProperty("--tab", c); b.innerHTML = `<span class="dot" style="background:${c}"></span>${esc(l)}`; b.setAttribute("aria-pressed", k === S.sp); b.onclick = () => setSp(k); row.appendChild(b); });
+  document.querySelectorAll("#viewRow .btn").forEach(b => b.onclick = () => setView(b.dataset.v));
+  const fr = document.getElementById("focusRow");
+  [["WLD", "World"], ["UKI", "Britain and Ireland"], ["MNG", "Mongolia"], ["NZL", "New Zealand"], ["URY", "Uruguay"], ["IND", "India"], ["CHN", "China"], ["NLD", "Netherlands"], ["DNK", "Denmark"], ["SAH", "Sahel"], ["BRA", "Brazil"], ["USA", "US"], ["AUS", "Australia"]].forEach(([iso, n]) => {
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = n;
+    b.onclick = () => { if (iso === "WLD") { S.sel = null; S.pt = null; S.county = null; map.setView([25, 12], small() ? 1 : 2); if (pop) map.closePopup(pop); side(); toMap(); return; }
+      if (iso === "UKI" || iso === "SAH") { map.fitBounds(FIT[iso]); S.sel = iso === "UKI" ? "GBR" : "TCD"; S.pt = null; S.county = null; side(); toMap(); return; } pickCountry(iso, true); };
+    fr.appendChild(b); });
+})();
+document.querySelectorAll("[data-sp]").forEach(b => b.onclick = e => { e.preventDefault(); if (b.dataset.view) setView(b.dataset.view); else if (S.view !== "grid") setView("grid"); setSp(b.dataset.sp); document.getElementById("atlas").scrollIntoView({ behavior: "smooth" });
+  if (b.dataset.focus) setTimeout(() => { if (b.dataset.focus === "UKI") { map.fitBounds(FIT.UKI); S.sel = "GBR"; side(); } else pickCountry(b.dataset.focus, true); toMap(); }, 350); });
+
+/* ---------- search: countries, UK counties, cities ---------- */
+(function search() {
+  const inp = document.getElementById("q"), sug = document.getElementById("sug"); let opts = [], k = -1;
+  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function build(q) {
+    const nq = norm(q); if (nq.length < 2) return [];
+    const out = [];
+    Object.entries(SITE.c).forEach(([iso, c]) => { if (c.v && norm(c.n).includes(nq)) out.push({ t: "c", n: c.n, iso, s: norm(c.n).startsWith(nq) ? 4 : 1.5 }); });
+    SITE.uk.forEach(e => { if (norm(e.n).includes(nq)) out.push({ t: "u", n: e.n, s: norm(e.n).startsWith(nq) ? 3 : 1.2 }); });
+    let m = 0; for (const c of CITIES) { if (norm(c[0]).includes(nq)) { out.push({ t: "p", n: c[0], c, s: (norm(c[0]).startsWith(nq) ? 2 : .8) + Math.min(c[3], 1e7) / 1e7 }); if (++m > 40) break; } }
+    const seen = new Set(); return out.sort((a, b) => b.s - a.s).filter(o => { const key = o.t + o.n; if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 12);
+  }
+  const lab = o => o.t === "c" ? `${esc(o.n)} <span>country</span>` : o.t === "u" ? `${esc(o.n)} <span>UK county</span>` : `${esc(o.n)} <span>place</span>`;
+  const show = () => { sug.innerHTML = opts.map((o, i) => `<li role="option" aria-selected="${i === k}" data-i="${i}">${lab(o)}</li>`).join(""); sug.style.display = opts.length ? "block" : "none"; };
+  const choose = o => { sug.style.display = "none"; inp.value = o.n; inp.blur();
+    if (o.t === "c") pickCountry(o.iso, true);
+    else if (o.t === "u") { const f = UKC && UKC.features.find(x => x.properties.n === o.n); if (S.view !== "grid") setView("grid"); if (f) { map.fitBounds(f._b, { maxZoom: 8 }); const c = f._b.getCenter(); S.pt = [c.lat, c.lng]; } S.county = o.n; S.sel = "GBR"; need("cid").then(() => { side(); }); toMap(); }
+    else { const c = o.c; if (S.view !== "grid") setView("grid"); map.setView([c[1], c[2]], 7); S.pt = [c[1], c[2]]; S.county = null; need("cid").then(() => { S.sel = isoAt(c[1], c[2]); S.county = countyAt(c[1], c[2]); popupAt(c[1], c[2]); side(); }); Promise.all(SK.map(need)).then(side); toMap(); } };
+  inp.addEventListener("input", () => { opts = build(inp.value); k = -1; show(); });
+  inp.addEventListener("keydown", e => { if (e.key === "ArrowDown") { k = Math.min(opts.length - 1, k + 1); show(); e.preventDefault(); } else if (e.key === "ArrowUp") { k = Math.max(0, k - 1); show(); e.preventDefault(); } else if (e.key === "Enter" && opts.length) { choose(opts[Math.max(0, k)]); } else if (e.key === "Escape") { sug.style.display = "none"; } });
+  sug.addEventListener("click", e => { const li = e.target.closest("li"); if (li) choose(opts[+li.dataset.i]); });
+  document.addEventListener("click", e => { if (!e.target.closest(".searchbox")) sug.style.display = "none"; });
+})();
+
+/* ---------- charts ---------- */
+function hbars(box, rows, opts) {
+  resp(box, (w, sm) => {
+    const maxLab = Math.max(...rows.map(r => String(r.lab ?? r.v).length)), lw = sm ? Math.min(150, w * .44) : Math.min(230, w * .4), rh = 26, h = rows.length * rh + 10, x0 = lw, x1 = w - 10 - maxLab * 7.4, max = opts.max || Math.max(...rows.map(r => r.v)) || 1;
+    const svg = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": opts.aria }, box);
+    if (opts.ref) { const x = x0 + (x1 - x0) * opts.ref.v / max; el("line", { x1: x, x2: x, y1: 0, y2: h - 4, stroke: css("--muted"), "stroke-dasharray": "3 3" }, svg); lbl(svg, x + 4, h - 2, opts.ref.l, "lab s m"); }
+    rows.forEach((r, i) => {
+      const y = 4 + i * rh, bw = Math.max(r.v > 0 ? 2 : 0, (x1 - x0) * r.v / max);
+      const cut = sm ? 19 : 30;
+      const t = lbl(svg, x0 - 8, y + 16, r.n.length > cut ? r.n.slice(0, cut - 1) + "." : r.n, "lab", "end");
+      const b = el("rect", { x: x0, y: y + 3, width: bw, height: rh - 9, fill: r.c, rx: 2 }, svg);
+      lbl(svg, x0 + bw + 6, y + 16, r.lab ?? fmt(r.v), "lab b");
+      if (r.tip) [b, t].forEach(e => { e.addEventListener("mousemove", ev => showTip(r.tip, ev.clientX, ev.clientY)); e.addEventListener("mouseleave", hideTip); });
+    });
+  });
+}
+function lines(box, years, ser, opts) {
+  resp(box, (w, sm) => {
+    const h = sm ? 230 : 260, pl = 46, pr = sm ? 8 : 96, pt = 18, pb = 26; const svg = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": opts.aria }, box);
+    const on = ser.filter(s => !s.off); const vals = on.flatMap(s => s.v.filter(v => v > 0));
+    if (!vals.length) return;
+    let lo = Math.min(...vals), hi = Math.max(...vals); if (opts.log) { lo = Math.pow(10, Math.floor(Math.log10(lo))); hi = Math.pow(10, Math.ceil(Math.log10(hi))); } else { lo = opts.min ?? 0; }
+    const X = i => pl + (w - pl - pr) * i / (years.length - 1), Y = v => opts.log ? pt + (h - pt - pb) * (1 - (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo))) : pt + (h - pt - pb) * (1 - (v - lo) / (hi - lo));
+    const ticks = opts.log ? (() => { const t = []; for (let p = Math.log10(lo); p <= Math.log10(hi) + 1e-9; p++) t.push(Math.pow(10, p)); return t; })() : opts.ticks;
+    ticks.forEach(v => { el("line", { x1: pl, x2: w - pr, y1: Y(v), y2: Y(v), stroke: css("--rule") }, svg); lbl(svg, pl - 6, Y(v) + 4, opts.tick ? opts.tick(v) : (v >= 1e9 ? v / 1e9 + "bn" : v >= 1e6 ? v / 1e6 + "m" : v >= 1e3 ? v / 1e3 + "k" : v), "lab s m", "end"); });
+    years.forEach((y, i) => { if ((y % 20 === 0 && y - years[0] > 8 && years[years.length - 1] - y > 3) || i === 0 || i === years.length - 1) lbl(svg, X(i), h - 6, y, "lab s m", "middle"); });
+    const ends = [];
+    ser.forEach(s => {
+      if (s.off) return; let d = ""; s.v.forEach((v, i) => { if (v > 0) d += (d && s.v[i - 1] > 0 ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1); });
+      const p = el("path", { d, fill: "none", stroke: s.c, "stroke-width": s.w || 2.2, "stroke-linejoin": "round", "stroke-dasharray": s.dash || "none" }, svg);
+      let li = s.v.length - 1; while (li > 0 && !(s.v[li] > 0)) li--;
+      ends.push({ s, y: Y(s.v[li]), x: X(li) });
+      p.addEventListener("mousemove", ev => showTip(`<b>${esc(s.n)}</b><br>${years[0]}: ${s.v[0] > 0 ? opts.unit(s.v[0]) : "n/a"}<br>${years[li]}: ${opts.unit(s.v[li])}`, ev.clientX, ev.clientY)); p.addEventListener("mouseleave", hideTip);
+    });
+    if (!sm) { ends.sort((a, b) => a.y - b.y); let last = -99; ends.forEach(e => { const y = Math.max(e.y, last + 13); last = y; const t = lbl(svg, w - pr + 6, y + 4, e.s.n, "lab s"); t.style.fill = e.s.c; }); }
+    if (opts.toggle || sm) {
+      const leg = document.createElement("div"); leg.className = "legend"; box.appendChild(leg);
+      leg.innerHTML = ser.map(s => `<span data-k="${s.k}" style="cursor:${opts.toggle ? "pointer" : "default"};opacity:${s.off ? .4 : 1}"><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join("");
+      if (opts.toggle) leg.querySelectorAll("[data-k]").forEach(e => e.onclick = ev => { ev.stopPropagation(); opts.toggle(e.dataset.k); });
+    }
+  });
+}
+(function charts() {
+  const W = R.world.sp;
+  const ks = ["chickens", "cattle", "sheep", "ducks", "goats", "pigs", "geese", "turkeys", "buffalo", "rabbits", "horses", "asses", "camels"];
+  hbars(document.getElementById("per100"), ks.map(k => ({ n: labOf(k), v: W[k].pp * 100, c: colOf(k), lab: sig(W[k].pp * 100), tip: `<b>${esc(labOf(k))}</b><br>${big(W[k].n)} in ${SITE.last}` })), { aria: "Farm animals for every 100 people" });
+  /* growth: world index lines */
+  fetch("data/page/series.json").then(r => r.json()).then(j => { SER = SER || j;
+    const w = j.c.WLD, gks = ["chickens", "goats", "pigs", "cattle", "sheep", "horses"];
+    const idx = a => a.map(v => v / a[0]);
+    lines(document.getElementById("growth"), j.years, [{ k: "_pop", n: "People", c: "#9A937F", v: idx(w._pop), w: 3, dash: "5 3" }].concat(gks.map(k => ({ k, n: labOf(k), c: colOf(k), v: idx(w[k]) }))),
+      { log: false, min: 0, ticks: [0, 1, 2, 4, 6, 8].filter(t => t <= 8), tick: v => v + "×", unit: v => v.toFixed(1) + " times " + SITE.first, aria: "World livestock as a multiple of " + SITE.first });
+    if (S.sel) side();
+  });
+  hbars(document.getElementById("mamChart"), R.mam_pp.top.map(t => ({ n: t.name, v: t.pp, c: "#8C4A2F", lab: t.pp.toFixed(1) })), { aria: "Farm mammals per person", ref: { v: 1, l: "one per person" } });
+  const cks = ["geese", "ducks", "buffalo", "pigs", "camels", "chickens", "goats", "cattle", "sheep", "horses"];
+  hbars(document.getElementById("concChart"), cks.map(k => { const c = R.conc[k]; return { n: `${labOf(k)}: ${c.top[0].name}`, v: c.top1_pct, c: colOf(k), lab: c.top1_pct.toFixed(0) + "%", tip: `<b>${esc(labOf(k))}</b><br>` + c.top.slice(0, 3).map(t => `${esc(t.name)} ${t.pct.toFixed(1)}%`).join("<br>") }; }), { aria: "Share of world stock in the top country", max: 100 });
+  const lk = SK.slice().sort((a, b) => R.grid.conc[a].land50_pct - R.grid.conc[b].land50_pct);
+  hbars(document.getElementById("landChart"), lk.map(k => ({ n: SP[k].l, v: R.grid.conc[k].land50_pct, c: SP[k].c, lab: R.grid.conc[k].land50_pct.toFixed(1) + "%", tip: `<b>${esc(SP[k].l)}</b><br>half on ${R.grid.conc[k].land50_pct.toFixed(1)}% of land, 90% on ${R.grid.conc[k].land90_pct.toFixed(0)}%` })), { aria: "Share of land holding half of each animal" });
+  const ukc = (k, n) => SITE.uk.filter(e => e.a > 300).map(e => ({ e, d: e[k] / e.a })).sort((a, b) => b.d - a.d).slice(0, n);
+  hbars(document.getElementById("ukSheep"), ukc("sheep", 10).map(({ e, d }) => ({ n: e.n, v: d, c: SP.sheep.c, lab: fmt(d) })), { aria: "Sheep per km2 by UK county" });
+  hbars(document.getElementById("ukPigs"), ukc("pigs", 10).map(({ e, d }) => ({ n: e.n, v: d, c: SP.pigs.c, lab: fmt(d) })), { aria: "Pigs per km2 by UK county" });
+  const box = document.getElementById("cards");
+  [["MNG", "goats", "Mongolia", "farm mammals per person", R.mongolia.pp.toFixed(1)], ["NZL", "sheep", "New Zealand", `sheep per person, down from ${R.nz.peak_pp.toFixed(1)} in ${R.nz.peak_year}`, R.nz.last_pp.toFixed(1)], ["URY", "cattle", "Uruguay", "cattle per person, the most anywhere", R.pp.cattle.top[0].pp.toFixed(1)],
+   ["DNK", "pigs", "Denmark", "pigs per person, the only country with more pigs than people", R.pp.pigs.top[0].pp.toFixed(1)], ["TCD", "goats", "Chad", "farm mammals per person, and a quarter of the world's camels", R.mam_pp.top[1].pp.toFixed(1)], ["IRL", "cattle", "Ireland", "cattle per person", R.ireland.cattle_pp.toFixed(1)]].forEach(([iso, k, name, what, n]) => {
+    const d = document.createElement("div"); d.className = "card"; d.style.setProperty("--c", colOf(k));
+    d.innerHTML = `<b>${esc(name)}</b><div class="big">${esc(n)} <span>${esc(what)}</span></div><button class="btn">Show on the map</button>`;
+    d.querySelector("button").onclick = () => { setView("pp"); setSp(k === "goats" && iso !== "TCD" ? "goats" : k); document.getElementById("atlas").scrollIntoView({ behavior: "smooth" }); setTimeout(() => pickCountry(iso, true), 350); };
+    box.appendChild(d); });
+})();
+
+/* ---------- start: geometry, names, then the grid ---------- */
+Promise.all([fetch("data/page/world.json").then(r => r.json()), fetch("data/page/cities.json").then(r => r.json())]).then(([w, c]) => {
+  WORLD = w; CITIES = c;
+  WORLD.features.forEach(f => { const b = L.geoJSON(f).getBounds(); let best = null, ba = 0; const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+    polys.forEach(p => { const bb = L.latLngBounds(p[0].map(q => [q[1], q[0]])); const a = (bb.getNorth() - bb.getSouth()) * (bb.getEast() - bb.getWest()); if (a > ba) { ba = a; best = bb; } });
+    f.properties._c = best ? best.getCenter() : b.getCenter(); f.properties._a = ba; });
+  choroL = L.geoJSON(WORLD, { pane: "fill", style: cStyle, onEachFeature: (f, l) => {
+    l.on("click", e => { L.DomEvent.stopPropagation(e); pickCountry(f.properties.iso, false); L.popup({ autoPan: false }).setLatLng(e.latlng).setContent(cTip(f.properties.iso) + "<br><small>Details in the panel</small>").openOn(map); });
+    l.on("mousemove", e => { const r = map.getContainer().getBoundingClientRect(); showTip(cTip(f.properties.iso), r.left + e.containerPoint.x, r.top + e.containerPoint.y); });
+    l.on("mouseout", hideTip); } });
+  if (S.view !== "grid") choroL.addTo(map);
+  applyLayers();
+});
+fetch("data/page/uk_counties.json").then(r => r.json()).then(j => { UKC = j; j.features.forEach(f => f._b = L.geoJSON(f).getBounds());
+  countyL = L.geoJSON(j, { pane: "lines", interactive: false, style: () => ({ color: isDark() ? "#DCD6C6" : "#3A3528", weight: .6, opacity: .5, dashArray: "3 3", fill: false }) }); drawLines(); });
+map.on("zoomend moveend", () => { placeNames(); });
+map.on("zoomend", drawLines);
+document.getElementById("theme").onclick = () => { const r = document.documentElement; r.dataset.theme = isDark() ? "light" : "dark"; setTiles(); legend(); redraws.forEach(f => f()); if (countyL) countyL.setStyle({ color: isDark() ? "#DCD6C6" : "#3A3528" }); };
+setTiles(); legend(); side(); need("cid"); renderGrid();
+</script>
+/*FULLSCREEN*/
+</body>
+</html>

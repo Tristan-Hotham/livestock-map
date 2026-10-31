@@ -1,0 +1,147 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Pagella}
+\newfontfamily\headfont{Inter}[UprightFont=*-ExtraBold,BoldFont=*-ExtraBold,Extension=.otf,Path=/usr/share/fonts/opentype/inter/]
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{graphicx,booktabs,float,caption,array,xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+\usepackage[round]{natbib}
+\usepackage{setspace}
+\setstretch{1.05}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.75}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\titleformat{\section}{\headfont\Large}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\headfont\large}{\thesubsection}{0.8em}{}
+\captionsetup{font=small,labelfont=bf}
+\urlstyle{same}
+\hypersetup{pdftitle={Where the Animals Are: the World's Farm Animals, Mapped},pdfauthor={Tristan Hotham}}
+
+\begin{document}
+\begin{center}
+{\Large\bfseries Where the Animals Are\par}
+\vspace{0.4em}
+{\large The world's cattle, sheep, goats, pigs, chickens and other farm animals,\\mapped every 10 km and counted by country, {{meta.first}} to {{meta.last}}\par}
+\vspace{1.2em}
+{\large Tristan Hotham\par}
+\vspace{0.3em}
+{\small Independent researcher\\
+ORCID: 0000-0003-4931-9349\\
+DOI: \href{https://doi.org/{{DOI}}}{https://doi.org/{{DOI}}}\par}
+\vspace{0.8em}
+2026
+\end{center}
+
+\begin{quote}
+\small
+\begin{center}\textbf{Abstract}\end{center}
+Most of the large animals alive on Earth are farm animals, but their geography is rarely shown in one place. I combine the FAO's Gridded Livestock of the World (GLW 4), which estimates the number of cattle, buffaloes, sheep, goats, pigs, chickens, ducks and horses in every 5 arc minute cell in 2015, with FAOSTAT's national livestock counts for {{meta.first}} to {{meta.last}} and World Bank population figures, and publish the result as an open interactive atlas. In {{meta.last}} there were about {{world.animals|bn}} farm animals alive at once, {{world.animals_pp|f1}} for every person: {{world.birds_pp|f1}} birds and {{world.mammals_pp|f2}} mammals per person. Since {{meta.first}} chickens have multiplied {{world.sp.chickens.x|f1}} times and goats {{world.sp.goats.x|f1}} times, against {{world.pop_x|f1}} times for people, while cattle per person fell from {{world.cattle_pp0|f2}} to {{world.cattle_pp|f2}}. Farm mammals outnumber people in {{mam_pp.n_more|int}} of {{mam_pp.n_countries|int}} countries of a million people or more, most of all in Mongolia ({{mongolia.pp|f1}} per person). Some animals belong largely to one country: China has {{conc.pigs.top1_pct|pc}} of the world's pigs and India {{conc.buffalo.top1_pct|pc}} of its buffaloes. On the grid, half of all pigs live on {{grid.conc.pigs.land50_pct|f1}}\% of the world's land and half of all cattle on {{grid.conc.cattle.land50_pct|f1}}\%. Weighted by livestock units, cattle are the main farm animal in {{main.counts.cattle|int}} of {{main.n|int}} countries and on {{grid.dom_pct.cattle|pc}} of the world's land. A closer look at Britain and Ireland separates the sheep hills of Wales and the Borders from the dairy pastures of the west and the pig and poultry plains of the east.
+
+\textbf{Keywords:} livestock; cattle; sheep; goats; pigs; poultry; FAOSTAT; Gridded Livestock of the World; mapping; open data
+\end{quote}
+
+\section{Introduction}
+Farm animals are among the most numerous large animals on Earth, and the land they need is vast: permanent meadows and pastures make up {{land.pasture_share|pc}} of the world's agricultural land in FAOSTAT's land use statistics. Yet the everyday picture of where farm animals live is patchy: sheep in New Zealand, cattle in Argentina, pigs in Denmark. This study puts the world's main farm animals on one map and asks four simple questions. How many are there, and how has that changed since {{meta.first}}? Where do animals outnumber people? How concentrated are they, between countries and on the ground? And which animal dominates each place?
+
+The sources are well known in agricultural research but less so outside it. The Food and Agriculture Organization's FAOSTAT database \citep{faostat} reports the number of animals alive in each country every year. The Gridded Livestock of the World \citep{gilbert2018,nicolas2016,robinson2014} turns sub-national census counts into a global grid of densities with a statistical model. Neither is new. The contribution here is descriptive and practical: a consistent set of country and grid statistics, an interactive atlas at \url{{{meta.page}}} where anyone can switch between animals and zoom to their own area, and open derived data and code.
+
+\section{Data}
+\textbf{Gridded Livestock of the World (GLW 4).} Global rasters at 5 arc minutes (about 10 km at the equator) for cattle, buffaloes, sheep, goats, pigs, chickens, ducks and horses for the reference year 2015, distributed by FAO on the Harvard Dataverse under CC BY 4.0 \citep{glw4}. I use the dasymetric (`Da') layers, in which each sub-national census total is shared among the cells inside its census area in proportion to densities predicted by random forest models from climate, vegetation, land cover, terrain, travel time to cities and human population \citep{nicolas2016,gilbert2018}. The cell area raster distributed with GLW gives densities per km\textsuperscript{2}. Summed over the world, the grid matches FAOSTAT's 2015 totals closely ({{grid.vs_fao2015.cattle|f1}}\% for cattle, {{grid.vs_fao2015.pigs|f1}}\% for pigs, {{grid.vs_fao2015.horses|f1}}\% for horses).
+
+\textbf{FAOSTAT.} Bulk downloads of the Crops and Livestock Products domain (QCL), the Livestock Patterns domain (EK) and the Land Use domain (RL), retrieved in {{meta.retrieved}} \citep{faostat}. From QCL I keep the element `Stocks' (animals alive, in head or thousand head) for eighteen items: cattle, buffaloes, sheep, goats, pigs, chickens, ducks, geese, turkeys, other birds, horses, asses, mules and hinnies, camels, other camelids, rabbits and hares, other rodents and beehives. From EK I take stocks expressed in livestock units, and from RL each country's land area and agricultural land.
+
+\textbf{Population and geography.} World Bank total population by country and year \citep{wbpop}, Natural Earth countries and populated places \citep{naturalearth}, and UK counties (ceremonial counties in England, preserved counties in Wales, council areas in Scotland and Northern Ireland as one unit) from ONS and partner boundaries.
+
+{{TABLE_WORLD}}
+
+\section{Methods}
+\textbf{Matching countries.} FAOSTAT areas are matched to Natural Earth countries through UN M49 codes. FAOSTAT's aggregate regions and its `China' total (which adds Taiwan, Hong Kong and Macao to the mainland) are excluded from country tables; China means mainland China. Former states, namely the USSR, Yugoslavia, Czechoslovakia, Serbia and Montenegro, Ethiopia PDR, the former Sudan and Belgium-Luxembourg, are counted in FAOSTAT's world totals but have no present-day country here, so series for their successors begin when FAOSTAT begins reporting them. French overseas departments reported separately by FAOSTAT are not joined to France. Per person figures divide by the World Bank population of the same year. A country is listed among those where animals `outnumber people' only if it has at least a million people.
+
+\textbf{Livestock units.} To compare a cow with a chicken I use FAOSTAT's own livestock unit factors. Dividing each country's stocks in livestock units (EK, latest year {{meta.lsu_year}}) by its head count (QCL, same year) gives a country specific factor for cattle, buffaloes, sheep, goats, pigs, chickens, horses, asses, mules and camels; ducks take the chicken factor, and countries without a factor take the world average. The world averages are {{grid.coef.cattle|f2}} for cattle, {{grid.coef.buffalo|f2}} for buffaloes, {{grid.coef.sheep|f2}} for sheep, {{grid.coef.goats|f2}} for goats, {{grid.coef.pigs|f2}} for pigs and {{grid.coef.chickens|f2}} for chickens. The `main animal' of a country or cell is the one with most livestock units. In the grid, each cell takes the factors of its country (cells outside every country outline take those of the nearest country), and cells with fewer than one livestock unit per km\textsuperscript{2} are left without a main animal.
+
+\textbf{Concentration.} For each animal, cells on land (Antarctica excluded) are sorted from densest to least dense, and I report the smallest share of the world's land area that holds half and nine tenths of the animals. The densest place for each animal is the cell with the highest average density over a 3 by 3 cell window.
+
+\textbf{UK counties.} County outlines are rasterised at 1/120 degree, ten times finer than the grid, to give the fraction of each grid cell in each county. Animals in a UK cell are shared among counties by those fractions, so cells along the coast keep all their animals on land. County totals therefore add up exactly to the grid's UK total.
+
+\textbf{Page grids.} For the interactive atlas, densities are coded on a logarithmic scale into 8 bit PNG images (one animal per colour channel) and decoded in the browser; values read from the map are within about five per cent of the grid.
+
+\section{Results}
+\subsection{How many, and how they have changed}
+In {{meta.last}} FAOSTAT counts about {{world.animals|bn}} farm animals alive at once, {{world.animals_pp|f1}} for each of {{world.pop|bn}} people (Table~\ref{tab:world}). Birds make up {{world.birds|bn}} of them, {{world.chick_share_birds|pc}} chickens; mammals {{world.mammals|bn}}. Since {{meta.first}} people have multiplied {{world.pop_x|f1}} times, chickens {{world.sp.chickens.x|f1}} times, ducks {{world.sp.ducks.x|f1}} times, goats {{world.sp.goats.x|f1}} times and camels {{world.sp.camels.x|f1}} times, while cattle ({{world.sp.cattle.x|f1}}) and sheep ({{world.sp.sheep.x|f1}}) grew more slowly than people and horses ({{world.sp.horses.x|f2}}) and mules ({{world.sp.mules.x|f2}}) declined (Figure~\ref{fig:growth}). Asia's share of the world's chickens rose from {{chick_asia_share0|pc}} to {{chick_asia_share|pc}}, and Africa and Asia now hold {{goats_afr_asia_share|pc}} of all goats. The world's pig herd peaked in {{pigs.peak_year}}; when African swine fever reached China, its herd fell by {{pigs.chn_fall_pct|pc}} between 2018 and 2019 ({{pigs.chn_fall_n|m0}} pigs) and the world herd by {{pigs.fall_pct|pc}}. By {{meta.last}} China's herd was back to {{pigs.chn_last|m0}}.
+
+\begin{figure}[tbp]\centering\includegraphics[width=\textwidth]{f_growth.png}
+\caption{World stocks of the main farm animals as a multiple of {{meta.first}}, with world population (FAOSTAT; World Bank).}\label{fig:growth}\end{figure}
+
+\subsection{Where they live}
+Figure~\ref{fig:species} maps six animals from the grid. Cattle are the most widespread, covering the grasslands and farmland of every continent; sheep and goats follow the drylands, from the Sahel and the Horn of Africa through the Middle East to Central Asia, with sheep also in Europe, southern Africa, Australia, New Zealand and Patagonia; pigs and chickens follow people and feed, densest in eastern China, Europe and the eastern United States; buffaloes are almost entirely Asian.
+
+\begin{figure}[tbp]\centering\includegraphics[width=\textwidth]{f_species.png}
+\caption{Density of six farm animals in 2015 (GLW 4, dasymetric layer), animals per km\textsuperscript{2} on a log scale. Titles give FAOSTAT world totals for {{meta.last}}.}\label{fig:species}\end{figure}
+
+\subsection{Where animals outnumber people}
+Farm mammals outnumber people in {{mam_pp.n_more|int}} of the {{mam_pp.n_countries|int}} countries with a million people or more (Figure~\ref{fig:outnumber}, Table~\ref{tab:pp}). Mongolia has {{mongolia.pp|f1}} per person, including {{pp.goats.top.0.pp|f1}} goats and {{pp.sheep.top.0.pp|f1}} sheep, the most of both anywhere; its goat herd has grown {{mongolia.goats_x|f1}} times since {{meta.first}}. Chad follows with {{mam_pp.top.1.pp|f1}}, then New Zealand ({{mam_pp.top.2.pp|f1}}), Uruguay ({{mam_pp.top.3.pp|f1}}) and Australia ({{mam_pp.top.4.pp|f1}}). Uruguay has the most cattle per person ({{pp.cattle.top.0.pp|f1}}), and Denmark is the only country of a million people or more with more pigs than people ({{pp.pigs.top.0.pp|f1}}). Chickens outnumber people in {{pp.chickens.n_more|int}} of these countries. New Zealand's sheep flock peaked in {{nz.peak_year}} at {{nz.peak|m}} ({{nz.peak_pp|f1}} per person) and has since fallen by {{nz.fall_pct|pc}} to {{nz.last|m}} ({{nz.last_pp|f1}} per person), while its cattle herd grew by about a fifth (Figure~\ref{fig:nz}).
+
+\begin{figure}[tbp]\centering\includegraphics[width=.9\textwidth]{f_outnumber.png}
+\caption{Farm mammals (cattle, buffaloes, sheep, goats, pigs, horses, asses, mules, camels, llamas and alpacas) per person, {{meta.last}}, countries of a million people or more.}\label{fig:outnumber}\end{figure}
+
+{{TABLE_PP}}
+
+\begin{figure}[tbp]\centering\includegraphics[width=.9\textwidth]{f_new_zealand.png}
+\caption{New Zealand's sheep, cattle and people, {{meta.first}} to {{meta.last}} (FAOSTAT; World Bank).}\label{fig:nz}\end{figure}
+
+\subsection{Concentration}
+Between countries, poultry other than chickens, pigs and buffaloes are the most concentrated (Figure~\ref{fig:conc}): China has {{conc.geese.top1_pct|pc}} of the world's geese, {{conc.ducks.top1_pct|pc}} of its ducks and {{conc.pigs.top1_pct|pc}} of its pigs; India has {{conc.buffalo.top1_pct|pc}} of the buffaloes, and India, Pakistan and China together {{conc.buffalo.top3_pct|pc}}. Chad has {{conc.camels.top1_pct|pc}} of the world's camels. The largest herds of cattle (Brazil, {{conc.cattle.top1_pct|pc}}), sheep (China, {{conc.sheep.top1_pct|pc}}) and horses (Mexico, {{conc.horses.top1_pct|pc}}) hold much smaller shares.
+
+On the ground the contrast is between grazing animals and housed ones (Figure~\ref{fig:land}). Half of the world's pigs live on {{grid.conc.pigs.land50_pct|f1}}\% of its land, half of its chickens on {{grid.conc.chickens.land50_pct|f1}}\% and half of its buffaloes on {{grid.conc.buffalo.land50_pct|f1}}\%, against {{grid.conc.sheep.land50_pct|f1}}\% for sheep and {{grid.conc.cattle.land50_pct|f1}}\% for cattle. The densest pig cells are in the south-east of the Netherlands, around {{grid.hot.pigs.near}} (about {{grid.hot.pigs.dens|int}} pigs per km\textsuperscript{2}).
+
+\begin{figure}[tbp]\centering\includegraphics[width=.9\textwidth]{f_concentration.png}
+\caption{Share of the world's stock held by the country with the most, {{meta.last}} (FAOSTAT).}\label{fig:conc}\end{figure}
+
+\begin{figure}[tbp]\centering\includegraphics[width=.9\textwidth]{f_land_half.png}
+\caption{The smallest share of the world's land (Antarctica excluded) that holds half of each animal, counting the densest cells first (GLW 4, 2015).}\label{fig:land}\end{figure}
+
+\subsection{The main animal}
+Weighted by livestock units, cattle are the main farm animal in {{main.counts.cattle|int}} of {{main.n|int}} countries, chickens in {{main.counts.chickens|int}}, pigs in {{main.counts.pigs|int}}, sheep in {{main.counts.sheep|int}}, and goats and camels in {{main.counts.goats|int}} each; across all countries cattle make up {{lsu_world.share.cattle|pc}} of livestock units, chickens {{lsu_world.share.chickens|pc}} and pigs {{lsu_world.share.pigs|pc}}. On the grid (Figure~\ref{fig:main}) cattle lead on {{grid.dom_pct.cattle|pc}} of the world's land and {{grid.empty_pct|pc}} has less than one livestock unit per km\textsuperscript{2}. Pigs lead across much of eastern China and in Denmark, the southern Netherlands and Catalonia; buffaloes in the plains of the Ganges and Indus; sheep in Patagonia, the Karoo, western and south-eastern Australia and Wales; sheep and goats along the desert edges of the Sahel, Arabia, Somalia and Iran; and chickens in the south-east of the United States, Arabia and Iran.
+
+\begin{figure}[tbp]\centering\includegraphics[width=\textwidth]{f_main_map.png}
+\caption{Main farm animal by livestock units in each 10 km cell, 2015 (GLW 4 with FAOSTAT livestock unit factors). Paler cells have fewer livestock units per km\textsuperscript{2}; cells with less than one are blank.}\label{fig:main}\end{figure}
+
+\subsection{Britain and Ireland}
+The United Kingdom has {{uk.fao.sheep|m}} sheep ({{meta.last}}), more than any other European country by FAOSTAT's count other than Turkey, which spans Europe and Asia, as well as {{uk.fao.cattle|m}} cattle, {{uk.fao.pigs|m}} pigs and {{uk.fao.chickens|m0}} chickens. By livestock units its main animal is cattle ({{uk.main_share|pc}}), then sheep ({{uk.lsu_share.sheep|pc}}). The grid divides the country by its uplands (Figure~\ref{fig:uk}, Table~\ref{tab:uk}): Wales has {{uk.wales_area_share|pc}} of the UK's land and {{uk.nations.Wales.sheep_share|pc}} of its sheep, {{uk.nations.Wales.sheep_km2|int}} per km\textsuperscript{2}, {{uk.wales_sheep_x_england|f1}} times England's density, and Powys alone has {{uk.top_sheep_n.0.share|pc}} of UK sheep ({{uk.top_sheep_km2.0.per_km2|int}} per km\textsuperscript{2}). Cattle are densest in Northern Ireland ({{uk.nations.Northern Ireland.cattle_km2|int}} per km\textsuperscript{2}) and in Cheshire, Cornwall and Somerset. England has {{uk.nations.England.pigs_share|pc}} of UK pigs, the largest numbers in North Yorkshire and Norfolk and the highest density in the East Riding of Yorkshire ({{uk.top_pigs_km2.0.per_km2|int}} per km\textsuperscript{2}); Herefordshire ({{uk.top_chickens_km2.0.per_km2|int}} per km\textsuperscript{2}) and Lincolnshire have the most chickens per km\textsuperscript{2}. Cattle are the main animal in {{uk.dom_counties.cattle|int}} of {{uk.n_counties|int}} counties, sheep in {{uk.dom_counties.sheep|int}}, pigs in {{uk.dom_counties.pigs|int}} and chickens in {{uk.dom_counties.chickens|int}}. Ireland has {{ireland.cattle_pp|f1}} cattle per person, and cattle make up {{ireland.cattle_lsu_share|pc}} of its livestock units.
+
+\begin{figure}[tbp]\centering\includegraphics[width=\textwidth]{f_britain_ireland.png}
+\caption{Britain and Ireland: main animal by livestock units and sheep density, 2015 (GLW 4), with UK counties.}\label{fig:uk}\end{figure}
+
+{{TABLE_UK}}
+
+\section{Discussion}
+The map confirms some familiar pictures and corrects others. The most numerous large farm animal is not the sheep of popular imagination but the cow, and the most numerous of all is the chicken, with {{world.sp.chickens.pp|f1}} alive for every person. The growth since {{meta.first}} has been in animals that turn feed into meat quickly (chickens, ducks, pigs) and in the hardy small ruminants of dry countries (goats, and camels), while working animals have declined. The geography follows: housed animals crowd onto a few per cent of the land near feed, people and processing, while cattle, sheep and goats spread across grasslands, drylands and hills. Countries where animals outnumber people are almost all dry or grassy and thinly peopled, from Mongolia and the Sahel to Uruguay, Australia and New Zealand.
+
+New Zealand shows that even the most familiar picture can be out of date: it has three times fewer sheep than in {{nz.peak_year}}. The United Kingdom remains one of the great sheep countries of Europe, but its sheep are concentrated in the hills of Wales, northern England and southern Scotland, while its pigs and poultry are on the arable plains of the east.
+
+\section{Limitations}
+First, the grid is a model. GLW shares census totals among cells using predicted densities, so within each census area the pattern reflects the covariates rather than observed farms; where census areas are large, as in parts of Africa and Asia, cells can look smooth or blocky, and animals may be spread thinly over remote land. Second, the grid is for 2015 only, while country counts run to {{meta.last}}; the two are not combined over time. Third, FAOSTAT stocks are official national figures and FAO estimates of uneven quality; nomadic and smallholder herds are hard to count, and some series are imputed. Fourth, stocks are animals alive at one time: broiler chickens live a few weeks, so the number raised in a year is far higher than the number alive. Fifth, livestock units are a rough common currency and the `main animal' depends on the factors chosen; by head, chickens would lead almost everywhere. Sixth, the UK county figures depend on the grid's own census inputs and on sharing 10 km cells by area. Finally, wild animals, reindeer, farmed fish and insects are not included.
+
+\section{Conclusion}
+Open data from FAO make it possible to map the world's farm animals in detail and to tell a clear story of change: many more chickens, goats and pigs, relatively fewer cattle per person, and fewer working animals. The atlas lets readers explore that story for any place on Earth, with the caveats of a modelled grid kept in view.
+
+\section*{Data and code availability}
+The interactive atlas is at \url{{{meta.page}}}. Data and code are at \url{{{meta.repo}}} and archived with this paper at \url{https://doi.org/{{DOI}}}. Derived data and text are released under CC BY 4.0 and code under the MIT licence. GLW 4 and FAOSTAT are CC BY 4.0 (FAO); World Bank data are CC BY 4.0; Natural Earth is in the public domain.
+
+\section*{AI statement}
+I wrote the text, with drafting and editing assistance from Claude (Anthropic), which also helped prepare the analysis code. I reviewed and checked all text and results.
+
+\begin{thebibliography}{9}
+\bibitem[FAO(2026)]{faostat} FAO (2026) FAOSTAT: Crops and livestock products (QCL), Livestock patterns (EK) and Land use (RL). Food and Agriculture Organization of the United Nations, Rome. CC BY 4.0. \url{https://www.fao.org/faostat/}
+\bibitem[Gilbert et al.(2018)]{gilbert2018} Gilbert, M., Nicolas, G., Cinardi, G., Wint, G. R. W., Vanwambeke, S. O. and Robinson, T. P. (2018) Global distribution data for cattle, buffaloes, horses, sheep, goats, pigs, chickens and ducks in 2010. \emph{Scientific Data}, 5, 180227. \url{https://doi.org/10.1038/sdata.2018.227}
+\bibitem[Gilbert et al.(2022)]{glw4} Gilbert, M. et al. (2022) Gridded Livestock of the World (GLW 4): global distribution of cattle (doi:10.7910/DVN/LHBICE), sheep (VZOYHM), goats (YYG6ET), pigs (CIVCPB), chickens (SXHLF3), buffaloes (I1WCAB), horses (JJGCTX) and ducks (S9ONXV) in 2015. Harvard Dataverse, CC BY 4.0. \url{https://doi.org/10.7910/DVN/LHBICE}
+\bibitem[Natural Earth(2026)]{naturalearth} Natural Earth (2026) Admin 0 countries (1:50m) and populated places. Public domain. \url{https://www.naturalearthdata.com/}
+\bibitem[Nicolas et al.(2016)]{nicolas2016} Nicolas, G., Robinson, T. P., Wint, G. R. W., Conchedda, G., Cinardi, G. and Gilbert, M. (2016) Using random forest to improve the downscaling of global livestock census data. \emph{PLoS ONE}, 11(3), e0150424.
+\bibitem[Robinson et al.(2014)]{robinson2014} Robinson, T. P., Wint, G. R. W., Conchedda, G., Van Boeckel, T. P., Ercoli, V., Palamara, E., Cinardi, G., D'Aietti, L. and Gilbert, M. (2014) Mapping the global distribution of livestock. \emph{PLoS ONE}, 9(5), e96084.
+\bibitem[World Bank(2026)]{wbpop} World Bank (2026) World Development Indicators: population, total (SP.POP.TOTL), as packaged at \url{https://github.com/datasets/population}. CC BY 4.0.
+\end{thebibliography}
+\end{document}
