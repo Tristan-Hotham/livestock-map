@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this data or code, please cite it as below."
+title: "Where the Animals Are: the World's Cattle, Sheep, Goats, Pigs, Chickens and Other Farm Animals, Mapped Every 10 km and Counted by Country, 1961 to 2024"
+type: dataset
+authors:
+  - family-names: Hotham
+    given-names: Tristan
+    orcid: "https://orcid.org/0000-0003-4931-9349"
+    affiliation: "Independent researcher"
+doi: "10.5281/zenodo.23842985"
+url: "https://maps.tristanhotham.com/livestock-map/"
+repository-code: "https://github.com/Tristan-Hotham/livestock-map"
+license: CC-BY-4.0
+keywords:
+  - "livestock"
+  - "cattle"
+  - "sheep"
+  - "goats"
+  - "pigs"
+  - "chickens"
+  - "FAOSTAT"
+  - "Gridded Livestock of the World"
+  - "maps"
+  - "open data"
